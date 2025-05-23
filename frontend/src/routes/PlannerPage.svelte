@@ -7,8 +7,10 @@
       const res = await fetch('http://localhost:5000/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ })
+        body: JSON.stringify({})
       });
+    });
+
   </script>
   
   <h1>Planner Page</h1>

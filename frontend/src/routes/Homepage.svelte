@@ -1,6 +1,14 @@
 <script>
     import { link } from 'svelte-spa-router';
     import '/src/hp.scss'
+    import LoginPage from './LoginPage.svelte';
+    import CalculatorPage from './CalculatorPage.svelte';
+    import GoalPage from './GoalPage.svelte';
+    import PlannerPage from './PlannerPage.svelte';
+    import ReportPage from './ReportPage.svelte';
+    import RecipePage from './RecipePage.svelte';
+
+    let currentPage = 'home';
 
     //https://developers.google.com/identity/protocols/oauth2/javascript-implicit-flow
 function redirectToDexLogin() {
@@ -21,10 +29,30 @@ function redirectToDexLogin() {
         <button class="loginButton" on:click={redirectToDexLogin}>Login</button>
 
       </div>
+      <nav>
+        <button on:click={() => currentPage = 'calculator'}>Calculator</button>
+        <button on:click={() => currentPage = 'goal'}>Goal</button>
+        <button on:click={() => currentPage = 'planner'}>Planner</button>
+        <button on:click={() => currentPage = 'report'}>Report</button>
+        <button on:click={() => currentPage = 'recipe'}>Recipe</button>
+      </nav>
+      
+      
+      {#if currentPage === 'calculator'}
+        <CalculatorPage />
+      {:else if currentPage === 'goal'}
+        <GoalPage />
+      {:else if currentPage === 'planner'}
+        <PlannerPage />
+      {:else if currentPage === 'report'}
+        <ReportPage />
+      {:else if currentPage === 'recipe'}
+        <RecipePage />
+      {/if}
     </header>
   
     <h1 class="Welcome">Welcome to Food Tracker</h1>
-  
+
     <div class="grid">
       <div class="card">
         <h3>About Us</h3>

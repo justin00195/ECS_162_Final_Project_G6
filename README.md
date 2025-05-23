@@ -19,7 +19,8 @@ cd frontend
 npm install
 npm run dev
 npm install -D @tsconfig/svelte
-npm install -D typescript svelte-check svelte-preprocess @sveltejs/vite-plugin-svelte vite
+npm install -D typescript svelte-check svelte-preprocess @sveltejs/vite-plugin-svelte vite svelte-spa-router
+
 ```
 ## run frontend 
 
