@@ -68,6 +68,108 @@ def auth_callback():
     except Exception as e:
         app.logger.exception("Error in /auth/callback")
         return f"error in callback", 500
+#login page 
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    if data.get('email') == 'test@example.com' and data.get('password') == '123456':
+        return jsonify({"message": "Login successful", "token": "dummy-jwt-token"}), 200
+    return jsonify({"message": "Invalid credentials"}), 401
+
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.json
+    return jsonify({"message": "Registration successful"}), 201
+
+#Calculator Page
+@app.route('/calculate', methods=['POST'])
+def calculate():
+    data = request.json
+    weight = data.get('weight')
+    height = data.get('height')
+    age = data.get('age')
+    sex = data.get('sex')
+    activity = data.get('activity')  # 1.2 ~ 1.9
+
+    if sex == 'male':
+        bmr = 10 * weight + 6.25 * height - 5 * age + 5
+    else:
+        bmr = 10 * weight + 6.25 * height - 5 * age - 161
+    tdee = bmr * activity
+
+    #macro
+    carbs_ratio = 0.50
+    protein_ratio = 0.20
+    fat_ratio = 0.30
+
+    # calculate calorie
+    carbs_g = round((tdee * carbs_ratio) / 4)
+    protein_g = round((tdee * protein_ratio) / 4)
+    fat_g = round((tdee * fat_ratio) / 9)
+
+    # database?
+
+    return jsonify({
+        "bmr": round(bmr, 2),
+        "tdee": round(tdee, 2),
+        "macros": {
+            "carbs_g": carbs_g,
+            "protein_g": protein_g,
+            "fat_g": fat_g
+        }
+    })
+
+
+#Goal Page
+@app.route('/goal', methods=['POST'])
+def set_goal():
+    data = request.json
+    goal_type = data.get('goal_type')  # lose, maintain, gain?
+    target_weight = data.get('target_weight')
+    duration_days = data.get('duration_days')
+
+    calorie_adjust = 500 if goal_type == "lose" else (-500 if goal_type == "gain" else 0)
+
+    return jsonify({
+        "message": "goal set successfully",
+        "calorie_adjust": calorie_adjust
+    })
+
+#Planner Page
+@app.route('/plan', methods=['POST'])
+def generate_plan():
+    data = request.json
+    meals = data.get('meals')  # 
+
+    return jsonify({
+        "suggestion": {
+            "breakfast": "",
+            "lunch": "",
+            "dinner": ""
+        }
+    })
+
+#Report Page
+@app.route('/report', methods=['GET'])
+def report():
+    return jsonify({
+        "protein": 85,
+        "carbs": 220,
+        "fat": 60,
+        "calories": 1750,
+        "goal_calories": 2000
+    })
+
+#Recipe Page
+@app.route('/recipes', methods=['GET'])
+def get_recipes():
+    return jsonify({
+        "recipes": [
+            {"name": "Oatmeal Banana Pancakes", "calories": 350},
+            {"name": "Tuna Salad Wrap", "calories": 420},
+            {"name": "Tofu Stir-Fry", "calories": 500}
+        ]
+    })
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8000)
