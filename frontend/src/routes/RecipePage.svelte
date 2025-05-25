@@ -4,7 +4,7 @@
     let recipes: Array<{ name: string; calories: number }> = [];
   
     onMount(async () => {
-      const res = await fetch('http://localhost:5000/recipes');
+      const res = await fetch('http://localhost:8000/recipes');
       const data = await res.json();
       recipes = data.recipes;
     });

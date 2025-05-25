@@ -4,7 +4,7 @@
     let report: any = {};
   
     onMount(async () => {
-      const res = await fetch('http://localhost:5000/report');
+      const res = await fetch('http://localhost:8000/report');
       report = await res.json();
     });
   </script>

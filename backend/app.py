@@ -1,17 +1,19 @@
-from flask import Flask, send_from_directory, request, redirect, session
+from flask import Flask, send_from_directory, request, redirect, session, jsonify
+from flask_cors import CORS
 import os
 import secrets
 import requests
 
 clientSecret = os.getenv("OIDC_CLIENT_SECRET")
 clientID = os.getenv("OIDC_CLIENT_ID")
-reDirect = 'http://localhost:8000/auth/callback'
+reDirect = 'http://172.19.0.5:5173//auth/callback'
 frontend_url = os.getenv("FRONTEND_URL")
 
 DEX_TOKEN_URL = 'http://dex:5556/token'
 DEX_USERINFO_URL = 'http://dex:5556/userinfo'
 
 app = Flask(__name__, static_folder='dist', static_url_path='')
+CORS(app)
 app.secret_key = secrets.token_hex(16)
 @app.route('/')
 def index():
