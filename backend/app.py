@@ -6,14 +6,14 @@ import requests
 
 clientSecret = os.getenv("OIDC_CLIENT_SECRET")
 clientID = os.getenv("OIDC_CLIENT_ID")
-reDirect = 'http://172.19.0.5:5173//auth/callback'
+reDirect = 'http://localhost:8000/auth/callback'
 frontend_url = os.getenv("FRONTEND_URL")
 
 DEX_TOKEN_URL = 'http://dex:5556/token'
 DEX_USERINFO_URL = 'http://dex:5556/userinfo'
 
 app = Flask(__name__, static_folder='dist', static_url_path='')
-CORS(app)
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": frontend_url}})
 app.secret_key = secrets.token_hex(16)
 @app.route('/')
 def index():
@@ -70,6 +70,28 @@ def auth_callback():
     except Exception as e:
         app.logger.exception("Error in /auth/callback")
         return f"error in callback", 500
+    
+    #Used for getting user info to make sure that the login was successful
+@app.route("/auth/user")
+def get_logged_in_user():
+    user = session.get('user')
+    app.logger.debug(f"Session user: {user}")  # Log the session state
+
+    # Explicitly check if the session is empty and return 401 if no user is logged in
+    #use this for unit testing
+    if user is None:
+        app.logger.debug("No user found in session.")
+        return jsonify({"user": None}), 401
+    return jsonify(user)
+
+#Logout redirection
+@app.route("/logout")
+def logout():
+    session.clear()
+    response = redirect(frontend_url)
+    response.set_cookie('session', '', expires=0)
+    return response
+    
 #login page 
 @app.route('/login', methods=['POST'])
 def login():

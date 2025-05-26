@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import { link } from 'svelte-spa-router';
     import '/src/hp.scss'
     import LoginPage from './LoginPage.svelte';
@@ -7,8 +7,35 @@
     import PlannerPage from './PlannerPage.svelte';
     import ReportPage from './ReportPage.svelte';
     import RecipePage from './RecipePage.svelte';
+    import { onMount } from 'svelte';
 
     let currentPage = 'home';
+    let isLoggedIn = false;
+    let userInfo = {};
+    let loading = true;
+
+onMount(async () => {
+  try {
+    const userRes = await fetch('http://localhost:8000/auth/user', {
+      credentials: 'include'
+    });
+    const datap = await userRes.json();
+    console.log(userRes.status, datap);
+
+    if (userRes.status === 200) {
+      console.log("User is logged in");
+      isLoggedIn = true;
+      userInfo = {...datap};
+    } else {
+      console.log("User is not logged in");
+      isLoggedIn = false;
+    }
+  } catch (error) {
+    console.error('Failed to fetch user info:', error);
+  } finally {
+    loading = false;
+  }
+});
 
     //https://developers.google.com/identity/protocols/oauth2/javascript-implicit-flow
 function redirectToDexLogin() {
@@ -19,6 +46,15 @@ function redirectToDexLogin() {
   const dexUrl = `http://localhost:5556/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=${responseType}&scope=${scope}`;
   window.location.href = dexUrl; // Redirect user to Dex login page
 }
+
+function userLogout() {
+  window.location.href = "http://localhost:8000/logout";
+  isLoggedIn = false;
+}
+
+function redirectToUserPortal(){
+
+}
   </script>
 
   
@@ -26,8 +62,13 @@ function redirectToDexLogin() {
     <header>
       <h2>Food Tracker</h2>
       <div class="auth-buttons">
-        <button class="loginButton" on:click={redirectToDexLogin}>Login</button>
-
+        {#if !loading}
+          {#if isLoggedIn}
+            <button class="accountIcon" on:click={userLogout} type="button" aria-label="User Account">👤</button>
+          {:else}
+            <button class="logoutFloatingButton" on:click={redirectToDexLogin}>Login</button>
+          {/if}
+        {/if}
       </div>
       <nav>
         <button on:click={() => currentPage = 'calculator'}>Calculator</button>
@@ -35,6 +76,9 @@ function redirectToDexLogin() {
         <button on:click={() => currentPage = 'planner'}>Planner</button>
         <button on:click={() => currentPage = 'report'}>Report</button>
         <button on:click={() => currentPage = 'recipe'}>Recipe</button>
+        {#if isLoggedIn}
+            <a use:link href="/user-portal">User Portal</a>
+        {/if}
       </nav>
       
       

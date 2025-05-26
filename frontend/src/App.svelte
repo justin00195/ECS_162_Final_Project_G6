@@ -1,14 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Router from 'svelte-spa-router';
-  import Home from './routes/Homepage.svelte';
+  import routes from './routes/routes';
 
-
-
-
-  const routes = {
-    '/': Home
-  };
 </script>
 
 <Router {routes} />
