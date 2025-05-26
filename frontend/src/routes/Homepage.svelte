@@ -52,9 +52,6 @@ function userLogout() {
   isLoggedIn = false;
 }
 
-function redirectToUserPortal(){
-
-}
   </script>
 
   
