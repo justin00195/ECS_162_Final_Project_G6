@@ -6,6 +6,7 @@
     let report: any = {};
 
     // calorieBudget should be calcualted from the goalpage
+
     let calorieBudget = 1000;
     let breakFast = 0;
     let lunch = 0;
@@ -59,7 +60,11 @@
       on:change={updateProgress}
       />
   </div>
-    
+  
+
+
+  <!--User input block where they can log their calories-->
+  <!-- It should be that they can search up their food and the food API puts the info into here-->
   <div>
     <label for = "lunchLabel">Lunch</label>
     <input
