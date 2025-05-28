@@ -1,0 +1,141 @@
+@import "variables.scss";
+
+.body {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	margin-top: 3rem;
+	margin-bottom: 5rem;
+}
+
+.heading {
+	font-weight: bold;
+}
+
+h1 {
+	color: $brown;
+}
+
+.results {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background-color: $bg-color;
+	border-radius: 30px;
+	width: 80%;
+	margin-top: 2rem;
+}
+
+.results-info {
+	display: flex;
+	align-items: center;
+	justify-content: space-around;
+	gap: 4rem;
+}
+
+.form {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background-color: $light-brown;
+	border-radius: 30px;
+	width: 80vw;
+	padding: 3rem;
+	margin-top: 3rem;
+}
+
+.inputs {
+	display: flex;
+	gap: 1rem 5rem;
+	flex-wrap: wrap;
+	justify-content: center;
+	max-width: 70%;
+}
+
+label {
+	display: flex;
+	flex-direction: column;
+	font-size: 1rem;
+	color: $dark-brown;
+	font-weight: bold;
+	margin-bottom: 1rem;
+	text-align: left;
+}
+
+input, select {
+	border: 1px solid $light-brown;
+	border-radius: 10px;
+	padding: 0.5rem 1rem;
+	color: $brown;
+	margin-top: 0.5rem;
+}
+
+select {
+	cursor: pointer;
+	width: 12rem;
+}
+
+.measurement {
+	display: flex;
+	align-items: baseline;
+	color: $brown;
+	font-weight: bold;
+	font-size: 2rem;
+	gap: 0.5rem;
+}
+
+.measurement p {
+	margin-top: 0;
+}
+
+.measurement-title {
+	color: $blue;
+}
+
+.units {
+	font-weight: normal;
+	font-size: 1.5rem;
+}
+
+.calculate-btn {
+	background-color: $blue;
+	color: white;
+	border: none;
+	padding: 1rem 4rem;
+	border-radius: 40px;
+	font-size: 1.5rem;
+	cursor: pointer;
+	margin-top: 3rem;
+	font-family: $main-font;
+	font-weight: bold;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+	&:hover {
+		background-color: darken($blue, 10%);
+	}
+}
+
+.description p {
+	margin: 0.5rem;
+}
+
+.measurement-heading {
+	font-size: 2rem;
+	color: $blue;
+	font-weight: bold;
+	font-style: italic;
+}
+.acronym {
+	font-size: 1.5rem;
+	color: $brown;
+	font-weight: normal;
+}
+.plus {
+	font-size: 2rem;
+	color: $brown;
+	font-weight: bold;
+}
