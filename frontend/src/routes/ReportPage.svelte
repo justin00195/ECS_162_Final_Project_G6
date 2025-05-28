@@ -102,7 +102,7 @@
     </div>
   </div>
       
-  <div class="macro-progress">
+  <div class="macro-progress-wrapper">
     <label for ="protien">Protien</label>
     <progress  id ="protien" max = {calorieBudget} value={progress.current}></progress>
 
@@ -120,11 +120,18 @@
     .marco-input-wrapper{
       display:grid;
       grid-template-columns: repeat(2,1fr);
+      gap:2rem;
+      margin-top:2rem;
     }
-
-    .macro-progress{
+    
+    .macro-progress-wrapper{
        gap:1rem;
+       background-color:#b0acaa;
+       border-radius: 10px;
+       max-width: 450px;
+       padding: 1rem;
     }
+    
     .input-box{
       display: grid;
       grid-template-columns: repeat(2,1fr);
