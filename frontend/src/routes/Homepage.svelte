@@ -1,6 +1,6 @@
 <script lang="ts">
     import { link } from 'svelte-spa-router';
-    import '/src/hp.scss'
+    import '/src/assets/hp.scss'
     import LoginPage from './LoginPage.svelte';
     import CalculatorPage from './CalculatorPage.svelte';
     import GoalPage from './GoalPage.svelte';
@@ -8,6 +8,7 @@
     import ReportPage from './ReportPage.svelte';
     import RecipePage from './RecipePage.svelte';
     import { onMount } from 'svelte';
+    import UserPortal from './UserPortal.svelte';
 
     let currentPage = 'home';
     let isLoggedIn = false;
@@ -57,25 +58,31 @@ function userLogout() {
   
   <div class="container">
     <header>
-      <h2>Food Tracker</h2>
-      <div class="auth-buttons">
-        {#if !loading}
-          {#if isLoggedIn}
-            <button class="accountIcon" on:click={userLogout} type="button" aria-label="User Account">👤</button>
-          {:else}
-            <button class="logoutFloatingButton" on:click={redirectToDexLogin}>Login</button>
-          {/if}
-        {/if}
-      </div>
+      <button on:click={() => currentPage = 'home'}>
+        <img src="./logo.png" alt="Food Tracker logo" id="logo">
+      </button>
       <nav>
         <button on:click={() => currentPage = 'calculator'}>Calculator</button>
         <button on:click={() => currentPage = 'goal'}>Goal</button>
         <button on:click={() => currentPage = 'planner'}>Planner</button>
         <button on:click={() => currentPage = 'report'}>Report</button>
         <button on:click={() => currentPage = 'recipe'}>Recipe</button>
-        {#if isLoggedIn}
-            <a use:link href="/user-portal">User Portal</a>
-        {/if}
+        <div>
+          {#if !loading}
+            {#if isLoggedIn}
+              <div class="logged-in">
+                <button on:click={() => currentPage = 'user-portal'}>
+                  <img src="./profile.png" alt="profile icon" id="profile-icon">
+                </button>
+                <button class="logout-btn" on:click={userLogout} type="button" aria-label="User Account">
+                  Logout
+                </button>
+              </div>
+            {:else}
+              <button class="login-btn" on:click={redirectToDexLogin}>Login</button>
+            {/if}
+          {/if}
+        </div>
       </nav>
     </header>
     {#if currentPage === 'calculator'}
@@ -88,6 +95,8 @@ function userLogout() {
         <ReportPage />
       {:else if currentPage === 'recipe'}
         <RecipePage />
+      {:else if currentPage === 'user-portal'}
+        <UserPortal />
       {/if}
   {#if currentPage === 'home'} 
     <h1 class="Welcome">Welcome to Food Tracker</h1>
@@ -107,4 +116,3 @@ function userLogout() {
       </div>
   {/if}
 </div>
-    

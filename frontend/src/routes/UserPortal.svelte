@@ -56,13 +56,7 @@
       color: #222;
     }
   </style>
-  <nav>
-    <button on:click={() => currentPage = 'calculator'}>Calculator</button>
-    <button on:click={() => currentPage = 'goal'}>Goal</button>
-    <button on:click={() => currentPage = 'planner'}>Planner</button>
-    <button on:click={() => currentPage = 'report'}>Report</button>
-    <button on:click={() => currentPage = 'recipe'}>Recipe</button>
-  </nav>
+
   <div class="userPortal">
     <h1>Your Profile</h1>
   
