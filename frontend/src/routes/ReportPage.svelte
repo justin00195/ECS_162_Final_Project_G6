@@ -9,7 +9,7 @@
 
     // calorieBudget should be calcualted from the goalpage
     // some how need to pull info from api about macros 
-    //3 main marcos are protien, fats, carbs s
+    //3 main marcos are protien, fats, carbs
 
     let calorieBudget = 1000;
     let breakFast = 0;
@@ -103,8 +103,8 @@
   </div>
       
   <div class="macro-progress-wrapper">
-    <label for ="protien">Protien</label>
-    <progress  id ="protien" max = {calorieBudget} value={progress.current}></progress>
+    <label for ="protein">Protein</label>
+    <progress  id ="protein" max = {calorieBudget} value={progress.current}></progress>
 
     <label for ="carbs">Carbohydrates</label>
     <progress id ="carbs" max = {calorieBudget} value={progress.current}></progress>
@@ -164,6 +164,8 @@
       appearance: none;
       border-radius: 15px;
       overflow: hidden;
-      
     }
+
+   
+
   </style>
