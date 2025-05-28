@@ -3,10 +3,13 @@
     import {Tween} from 'svelte/motion'
     import { cubicOut } from 'svelte/easing';
     
+    
   
     let report: any = {};
 
     // calorieBudget should be calcualted from the goalpage
+    // some how need to pull info from api about macros 
+    //3 main marcos are protien, fats, carbs s
 
     let calorieBudget = 1000;
     let breakFast = 0;
@@ -34,7 +37,10 @@
   </script>
   
   
-<pre>{JSON.stringify(report, null, 2)}</pre>
+<!--
+ <pre>{JSON.stringify(report, null, 2)}</pre>
+-->
+ 
   <header>
     <h1>Report Page</h1>
   </header>
@@ -51,62 +57,79 @@
   </div>
 </div>
 
-<div class = "input-box">
-  <div>
-    <label for = "breakFastLabel">Breakfast</label>
-    <input
-      id ="breakFastLabel"
-      type ="number"
-      bind:value={breakFast}
-      on:change={updateProgress}
-      />
-  </div>
-  
 
 
-  <!--User input block where they can log their calories-->
-  <!-- It should be that they can search up their food and the food API puts the info into here-->
-  <div>
-    <label for = "lunchLabel">Lunch</label>
-    <input
-      id ="lunchLabel"
-      type ="number"
-      bind:value={lunch}
-      on:change={updateProgress}
-      />
-  </div>
 
-   <div>
-    <label for = "dinnerLabel">Dinner</label>
-    <input
-      id ="dinnerLabel"
-      type ="number"
-      bind:value={dinner}
-      on:change={updateProgress}
-      />
+<div class= "marco-input-wrapper">
+  <div class = "input-box">
+    <div>
+      <label for = "breakFastLabel">Breakfast</label>
+      <input
+        id ="breakFastLabel"
+        type ="number"
+        bind:value={breakFast}
+        on:change={updateProgress}
+        />
+    </div>
+    <!--User input block where they can log their calories-->
+    <!-- It should be that they can search up their food and the food API puts the info into here-->
+    <div>
+      <label for = "lunchLabel">Lunch</label>
+      <input
+        id ="lunchLabel"
+        type ="number"
+        bind:value={lunch}
+        on:change={updateProgress}
+        />
+    </div>
+    <div>
+      <label for = "dinnerLabel">Dinner</label>
+      <input
+        id ="dinnerLabel"
+        type ="number"
+        bind:value={dinner}
+        on:change={updateProgress}
+        />
+    </div>
+    <div>
+      <label for = "snacksLabel">Snacks</label>
+      <input
+        id ="snacksLabel"
+        type ="number"
+        bind:value={snacks}
+        on:change={updateProgress}
+        />
+    </div>
   </div>
-    
-  <div>
-    <label for = "snacksLabel">Snacks</label>
-    <input
-      id ="snacksLabel"
-      type ="number"
-      bind:value={snacks}
-      on:change={updateProgress}
-      />
+      
+  <div class="macro-progress">
+    <label for ="protien">Protien</label>
+    <progress  id ="protien" max = {calorieBudget} value={progress.current}></progress>
+
+    <label for ="carbs">Carbohydrates</label>
+    <progress id ="carbs" max = {calorieBudget} value={progress.current}></progress>
+
+    <label for ="fats">Fats</label>
+    <progress id ="fats" max = {calorieBudget} value={progress.current}></progress>
   </div>
 </div>
-     
-  
   
   <!---Subject to change-->
   <style>
 
+    .marco-input-wrapper{
+      display:grid;
+      grid-template-columns: repeat(2,1fr);
+    }
+
+    .macro-progress{
+       gap:1rem;
+    }
     .input-box{
       display: grid;
       grid-template-columns: repeat(2,1fr);
       gap:1rem;
-      max-width: 400px;
+      max-width: 450px;
       margin: 1rem auto;
       background-color: #DFD3CC;
       border-radius: 10px;
