@@ -1,7 +1,6 @@
 <script lang="ts">
     import { link } from 'svelte-spa-router';
     import '/src/assets/hp.scss'
-    import LoginPage from './LoginPage.svelte';
     import CalculatorPage from './CalculatorPage.svelte';
     import GoalPage from './GoalPage.svelte';
     import PlannerPage from './PlannerPage.svelte';

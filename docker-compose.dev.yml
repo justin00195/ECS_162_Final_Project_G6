@@ -25,7 +25,7 @@ services:
     depends_on:
       - mongo
       - dex
-    command: sh -c "pip install --no-cache-dir -r requirements.txt && python -m flask run --host=0.0.0.0 --port=\$PORT --reload"
+    command: sh -c "pip install --no-cache-dir -r requirements.txt && python init_db.py && python -m flask run --host=0.0.0.0 --port=\$PORT --reload"
     environment:
       FLASK_APP: app.py
 

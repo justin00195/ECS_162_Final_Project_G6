@@ -1,48 +1,64 @@
 <script lang="ts">
-  import '../assets/calculator.scss'
+  import { onMount } from 'svelte';
+  import '../assets/calculator.scss';
 
   let bmr = 0;
   let tdee = 0;
   let showResults = false;
+  let error = '';
 
-  interface BodyInput {
-    sex: 'male' | 'female';
-    age: number;
-    height: number;
-    weight: number;
-    activity: number;
-  }
-
-  let input: BodyInput = {
-    sex: 'male',
-    age: 25,
-    height: 175,
-    weight: 70,
-    activity: 1.55
+  let user = {
+    gender: '',
+    age: 0,
+    height: 0,
+    weight: 0,
+    activity_level: 1.55
   };
+
+  onMount(async () => {
+    try {
+      const res = await fetch('http://localhost:8000/user/profile', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (res.ok) {
+        user = data;
+      } else {
+        error = data.error || 'error to load profile';
+      }
+    } catch (err) {
+      error = 'profile error';
+    }
+  });
 
   const calculate = async () => {
-    const res = await fetch('http://localhost:8000/calculate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input)
-    });
+    try {
+      const res = await fetch('http://localhost:8000/calculate', {
+        method: 'GET',
+        credentials: 'include'
+      });
 
-    const data = await res.json();
-    bmr = data.bmr;
-    tdee = data.tdee;
-    showResults = true;
-
-    const results = document.querySelector('.results');
-    if (results) {
-      results.scrollIntoView({ behavior: 'smooth' });
+      const data = await res.json();
+      if (!res.ok) {
+        error = data.error || 'errror fetch data';
+        return;
+      }
+      bmr = data.bmr;
+      tdee = data.tdee;
+      showResults = true;
+      const results = document.querySelector('.results');
+      if (results) {
+        results.scrollIntoView({ behavior: 'smooth' });
+      }
+    } catch (err) {
+      error = 'fetch error';
     }
   };
-
 </script>
 
 <div class="body">
-  <h1 class="heading">Input your information below to calculate your</h1>
+  <h1 class="heading">Based on your profile to calculate your</h1>
   <div class="description">
     <p class="measurement-heading">Basal Metabolic Rate</p>
     <p class="acronym">(BMR)</p>
@@ -52,35 +68,12 @@
   </div>
 
   <div class="form">
-    <div class="inputs">
-      <label>Sex:
-        <select bind:value={input.sex}>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-        </select>
-      </label>
-
-      <label>Age:
-        <input type="number" bind:value={input.age} />
-      </label>
-
-      <label>Height (cm):
-        <input type="number" bind:value={input.height} />
-      </label>
-
-      <label>Weight (kg):
-        <input type="number" bind:value={input.weight} />
-      </label>
-
-      <label>Activity Level:
-        <select bind:value={input.activity}>
-          <option value={1.2}>Sedentary</option>
-          <option value={1.375}>Lightly active</option>
-          <option value={1.55}>Moderately active</option>
-          <option value={1.725}>Very active</option>
-          <option value={1.9}>Super active</option>
-        </select>
-      </label>
+    <div class="input">
+      <p><strong>Gender:</strong> {user.gender}</p>
+      <p><strong>Age:</strong> {user.age}</p>
+      <p><strong>Height:</strong> {user.height} cm</p>
+      <p><strong>Weight:</strong> {user.weight} kg</p>
+      <p><strong>Activity Level:</strong> {user.activity_level}</p>
     </div>
 
     {#if showResults}
@@ -88,13 +81,13 @@
         <h1 class="results-title">Results</h1>
         <div class="results-info">
           <div class="measurement">
-            <p class="measurement-title">BMR: </p>
-            <p>{bmr} </p>
+            <p class="measurement-title">BMR:</p>
+            <p>{bmr}</p>
             <p class="units">kcal/day</p>
           </div>
           <div class="measurement">
-            <p class="measurement-title">TDEE: </p>
-            <p>{tdee} </p>
+            <p class="measurement-title">TDEE:</p>
+            <p>{tdee}</p>
             <p class="units">kcal/day</p>
           </div>
         </div>
@@ -104,5 +97,6 @@
       <button on:click={calculate} class="calculate-btn">Calculate!</button>
     {/if}
   </div>
-
 </div>
+
+
