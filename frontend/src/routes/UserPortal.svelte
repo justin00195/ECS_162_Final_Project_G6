@@ -26,7 +26,7 @@
         error = data.error || 'Please fill your profile';
       }
     } catch (err) {
-      error = 'profile error';
+      error = 'Please fill your profile';
     } finally {
       loading = false;
     }

@@ -180,6 +180,13 @@ def get_goal():
         "duration_days": row["duration_days"]
     })
 
+@app.route("/logout")
+def logout():
+    session.clear()
+    response = redirect(frontend_url)
+    response.set_cookie('session', '', expires=0)
+    return response
+
 @app.route('/goal', methods=['POST'])
 def set_goal():
     user = session.get('user')
