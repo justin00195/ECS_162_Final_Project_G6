@@ -16,11 +16,52 @@
     let lunch = 0;
     let dinner = 0;
     let snacks = 0;
-  
-    onMount(async () => {
-      const res = await fetch('http://localhost:8000/report');
-      report = await res.json();
-    });
+
+    let breakFastQ = '';
+    let lunchQ = '';
+    let dinnerQ = '';
+    let snacksQ = '';
+    // function to get the food data such as cals and update the progress bar
+    // there are 4 different meals but 
+    async function getFoodData(meal:string, query: string) {
+      try{
+        const res = await fetch('http://localhost:8000/report',{
+          method: 'POST',
+          headers:{'Content-Type': 'application/json'},
+          credentials: 'include',
+          body: JSON.stringify({query})
+        })
+        const data = await res.json();
+
+        const item = data.items?.[0]
+        if (!item){
+          alert("No Food Found!")
+          return
+        }
+
+        const calories = Math.round(item.calories)
+
+        if(meal =='breakfast'){
+          breakFast = calories
+          breakFastQ = `${item.name} (${calories} cals)`
+        }else if (meal =='lunch'){
+          lunch = calories
+          lunchQ = `${item.name} (${calories} cals)`
+        }else if (meal =='dinner'){
+          dinner = calories
+          dinnerQ = `${item.name} (${calories} cals)`
+        }else if (meal =='snacks'){
+          snacks = calories
+          snacksQ = `${item.name} (${calories} cals)`
+        }
+        
+        updateProgress()
+    }catch(err){
+      console.error("Failed to get data")
+    }
+  }
+    
+ 
 
 
     let progress = new Tween(0, {
@@ -34,6 +75,27 @@
       const totalCals = breakFast + lunch + dinner + snacks;
       progress.target = Math.min(calorieBudget, Math.max(0,totalCals))
     }
+
+
+
+
+    async function testing(){
+      try {
+        const tesRest = await fetch('http://localhost:8000/report',{
+          method: 'POST',
+          headers:{'Content-Type': 'application/json'},
+          credentials: 'include',
+          body: JSON.stringify({query: 'egg'})
+        })
+        const data = await tesRest.json();
+        console.log('data', data)
+        alert('Test pass')
+      }catch (error){
+        console.error('Failed', error)
+         alert('Test Failed')
+      }
+    }
+    
   </script>
   
   
@@ -44,7 +106,7 @@
   <header>
     <h1>Report Page</h1>
   </header>
-    
+<button on:click={testing}>tester</button>
 <div class="progress-container">
   <div class ="progress-wrapper">
     <div class ="progress-label">Daily Calorie Budget</div>
@@ -66,10 +128,10 @@
       <label for = "breakFastLabel">Breakfast</label>
       <input
         id ="breakFastLabel"
-        type ="number"
-        bind:value={breakFast}
-        on:change={updateProgress}
+        type ="text"
+        bind:value={breakFastQ}
         />
+        <button on:click={()=> getFoodData('breakfast', breakFastQ)}>Add</button>
     </div>
     <!--User input block where they can log their calories-->
     <!-- It should be that they can search up their food and the food API puts the info into here-->
@@ -77,28 +139,28 @@
       <label for = "lunchLabel">Lunch</label>
       <input
         id ="lunchLabel"
-        type ="number"
-        bind:value={lunch}
-        on:change={updateProgress}
+        type ="text"
+        bind:value={lunchQ}
         />
+        <button on:click={()=> getFoodData('lunch', lunchQ)}>Add</button>
     </div>
     <div>
       <label for = "dinnerLabel">Dinner</label>
       <input
         id ="dinnerLabel"
-        type ="number"
-        bind:value={dinner}
-        on:change={updateProgress}
+        type ="text"
+        bind:value={dinnerQ}
         />
+        <button on:click={()=> getFoodData('dinner', dinnerQ)}>Add</button>
     </div>
     <div>
       <label for = "snacksLabel">Snacks</label>
       <input
         id ="snacksLabel"
-        type ="number"
-        bind:value={snacks}
-        on:change={updateProgress}
+        type ="text"
+        bind:value={snacksQ}
         />
+        <button on:click={()=> getFoodData('snacks', snacksQ)}>Add</button>
     </div>
   </div>
       

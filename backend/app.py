@@ -8,9 +8,11 @@ clientSecret = os.getenv("OIDC_CLIENT_SECRET")
 clientID = os.getenv("OIDC_CLIENT_ID")
 reDirect = 'http://localhost:8000/auth/callback'
 frontend_url = os.getenv("FRONTEND_URL")
+cal_api_key = os.getenv("CAL_NJ_API_KEY")
 
 DEX_TOKEN_URL = 'http://dex:5556/token'
 DEX_USERINFO_URL = 'http://dex:5556/userinfo'
+
 
 app = Flask(__name__, static_folder='dist', static_url_path='')
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": frontend_url}})
@@ -174,15 +176,20 @@ def generate_plan():
     })
 
 #Report Page
-@app.route('/report', methods=['GET'])
+@app.route('/report', methods=['POST'])
 def report():
-    return jsonify({
-        "protein": 85,
-        "carbs": 220,
-        "fat": 60,
-        "calories": 1750,
-        "goal_calories": 2000
-    })
+  data = request.json
+  query = data.get('query')
+  
+  if not query:
+      return jsonify({"error": "Missing food query"}), 400
+  
+  api_url = f'https://api.calorieninjas.com/v1/nutrition?query={query}'
+  response = requests.get(api_url, headers={'X-Api-key': cal_api_key})
+  if response.status_code == 200:
+      return jsonify(response.json())
+  else:
+      return jsonify({"error": "FAILED TO GET FOOD DATA"})
 
 #Recipe Page
 @app.route('/recipes', methods=['GET'])
