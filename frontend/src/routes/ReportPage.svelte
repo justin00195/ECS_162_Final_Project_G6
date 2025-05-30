@@ -22,37 +22,47 @@
     let dinnerQ = '';
     let snacksQ = '';
     // function to get the food data such as cals and update the progress bar
-    // there are 4 different meals but 
+    // there are 4 different meals and du
     async function getFoodData(meal:string, query: string) {
       try{
-        const res = await fetch('http://localhost:8000/report',{
-          method: 'POST',
-          headers:{'Content-Type': 'application/json'},
-          credentials: 'include',
-          body: JSON.stringify({query})
+
+          const queries = query.split(',').map(q=>q.trim())
+          let totalCals = 0
+          let labels: string[] = []
+
+          for (const q of queries){
+            const res = await fetch('http://localhost:8000/report',{
+            method: 'POST',
+            headers:{'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({query:q})
         })
-        const data = await res.json();
+            const data = await res.json();
 
-        const item = data.items?.[0]
-        if (!item){
-          alert("No Food Found!")
-          return
-        }
+            const item = data.items?.[0]
+            if (!item){
+              alert("No Food Found!")
+              return
+            }
 
-        const calories = Math.round(item.calories)
+            const calories = Math.round(item.calories)
+            totalCals += calories
+            labels.push(`${item.name}(${calories} cals)`)
 
+          }
+      
         if(meal =='breakfast'){
-          breakFast = calories
-          breakFastQ = `${item.name} (${calories} cals)`
+          breakFast = totalCals
+          breakFastQ = labels.join(',')
         }else if (meal =='lunch'){
-          lunch = calories
-          lunchQ = `${item.name} (${calories} cals)`
+          lunch = totalCals
+          lunchQ = labels.join(',')
         }else if (meal =='dinner'){
-          dinner = calories
-          dinnerQ = `${item.name} (${calories} cals)`
+          dinner = totalCals
+          dinnerQ = labels.join(',')
         }else if (meal =='snacks'){
-          snacks = calories
-          snacksQ = `${item.name} (${calories} cals)`
+          snacks = totalCals
+          snacksQ = labels.join(',')
         }
         
         updateProgress()
