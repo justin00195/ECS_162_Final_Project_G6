@@ -61,7 +61,7 @@
           }
         
         
-        mealList[meal] = labels;
+        mealList[meal] = [...mealList[meal], ...labels];
 
         if(meal =='breakfast'){
           breakFast = totalCals
