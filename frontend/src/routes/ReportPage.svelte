@@ -21,9 +21,18 @@
     let lunchQ = '';
     let dinnerQ = '';
     let snacksQ = '';
-    // function to get the food data such as cals and update the progress bar
-    // there are 4 different meals and du
-    async function getFoodData(meal:string, query: string) {
+
+    type mealType = 'breakfast' | 'lunch' |'dinner'|'snacks';
+
+    let mealList: Record<mealType, String[]>={
+      breakfast: [],
+      lunch: [],
+      dinner: [],
+      snacks: [],
+    }
+    
+    // when new food is added it replaces the old one in the list 
+    async function getFoodData(meal:mealType, query: string) {
       try{
 
           const queries = query.split(',').map(q=>q.trim())
@@ -50,7 +59,10 @@
             labels.push(`${item.name}(${calories} cals)`)
 
           }
-      
+        
+        
+        mealList[meal] = labels;
+
         if(meal =='breakfast'){
           breakFast = totalCals
           breakFastQ = labels.join(',')
@@ -185,9 +197,41 @@
     <progress id ="fats" max = {calorieBudget} value={progress.current}></progress>
   </div>
 </div>
+
+
+<div class="display-info-wrapper">
+  <h2>Meals Eaten Today</h2>
+
+  {#each Object.entries(mealList) as [mealName, items]}
+    <div class="meal-stats">
+      <h3>{mealName.charAt(0).toUpperCase() + mealName.slice(1)}</h3>
+      {#if items.length > 0}
+        <ul>
+          {#each items as item }
+            <li>{item}</li>
+          {/each}
+        </ul>
+        {:else}
+          <p>No Food Found! Please Add it!</p>
+        {/if}
+    </div>
+  {/each}
+</div>
   
   <!---Subject to change-->
   <style>
+    .display-info-wrapper{
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background-color: #b0acaa;
+      border-radius: 15px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  
+    .meal-stats{
+      margin-bottom: 2rem;
+    }
 
     .marco-input-wrapper{
       display:grid;
