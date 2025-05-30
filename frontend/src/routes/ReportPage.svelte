@@ -22,9 +22,20 @@
     let dinnerQ = '';
     let snacksQ = '';
 
-    type mealType = 'breakfast' | 'lunch' |'dinner'|'snacks';
+    
+    let totalProtein = 0;
+    let totalCarbs = 0;
+    let totalFats = 0;
+    
 
-    let mealList: Record<mealType, String[]>={
+
+    type mealType = 'breakfast' | 'lunch' |'dinner'|'snacks';
+    type foodItem = {
+      name: string;
+      grams: number;
+    }
+
+    let mealList: Record<mealType, foodItem[]>={
       breakfast: [],
       lunch: [],
       dinner: [],
@@ -38,6 +49,7 @@
           const queries = query.split(',').map(q=>q.trim())
           let totalCals = 0
           let labels: string[] = []
+          let newFood: foodItem[] = []
 
           for (const q of queries){
             const res = await fetch('http://localhost:8000/report',{
@@ -48,21 +60,24 @@
         })
             const data = await res.json();
 
-            const item = data.items?.[0]
-            if (!item){
-              alert("No Food Found!")
-              return
+           if (data.items){
+            for(const item of data.items){
+              totalProtein += item.protein_g || 0;
+              totalCarbs += item.carbohydrates_total_g || 0;
+              totalFats += item.fat_total_g || 0;
+              totalCals += item.calories || 0;
+              labels.push(item.name)
+              
+              newFood.push({
+                name: item.name,
+                grams: item.serving_size_g
+              })
             }
-
-            const calories = Math.round(item.calories)
-            totalCals += calories
-            labels.push(`${item.name}(${calories} cals)`)
-
+           }
           }
         
+          mealList = {...mealList, [meal]:newFood}
         
-        mealList[meal] = [...mealList[meal], ...labels];
-
         if(meal =='breakfast'){
           breakFast = totalCals
           breakFastQ = labels.join(',')
@@ -99,24 +114,6 @@
     }
 
 
-
-
-    async function testing(){
-      try {
-        const tesRest = await fetch('http://localhost:8000/report',{
-          method: 'POST',
-          headers:{'Content-Type': 'application/json'},
-          credentials: 'include',
-          body: JSON.stringify({query: 'egg'})
-        })
-        const data = await tesRest.json();
-        console.log('data', data)
-        alert('Test pass')
-      }catch (error){
-        console.error('Failed', error)
-         alert('Test Failed')
-      }
-    }
     
   </script>
   
@@ -125,14 +122,11 @@
  <pre>{JSON.stringify(report, null, 2)}</pre>
 -->
  
-  <header>
-    <h1>Report Page</h1>
-  </header>
-<button on:click={testing}>tester</button>
+<h1>Report Page</h1>
 <div class="progress-container">
   <div class ="progress-wrapper">
     <div class ="progress-label">Daily Calorie Budget</div>
-    <progress max = {calorieBudget} value={progress.current}></progress>
+    <progress class = "cals-prog" max = {calorieBudget} value={progress.current}></progress>
 
 
   <div class ="progress-info">
@@ -142,84 +136,117 @@
 </div>
 
 
+<div class = "report-layout">
+  <div class="left-side">
+    <div class= "marco-input-wrapper">
+      <div class = "input-box">
+        <div>
+          <label for = "breakFastLabel">Breakfast</label>
+          <input
+            id ="breakFastLabel"
+            type ="text"
+            bind:value={breakFastQ}
+            />
+            <button class ="add-button" on:click={()=> getFoodData('breakfast', breakFastQ)}>Add</button>
+        </div>
+        <!--User input block where they can log their calories-->
+        <!-- It should be that they can search up their food and the food API puts the info into here-->
+        <div>
+          <label for = "lunchLabel">Lunch</label>
+          <input
+            id ="lunchLabel"
+            type ="text"
+            bind:value={lunchQ}
+            />
+            <button class ="add-button" on:click={()=> getFoodData('lunch', lunchQ)}>Add</button>
+        </div>
+        <div>
+          <label for = "dinnerLabel">Dinner</label>
+          <input
+            id ="dinnerLabel"
+            type ="text"
+            bind:value={dinnerQ}
+            />
+            <button class ="add-button" on:click={()=> getFoodData('dinner', dinnerQ)}>Add</button>
+        </div>
+        <div>
+          <label for = "snacksLabel">Snacks</label>
+          <input
+            id ="snacksLabel"
+            type ="text"
+            bind:value={snacksQ}
+            />
+            <button class ="add-button" on:click={()=> getFoodData('snacks', snacksQ)}>Add</button>
+        </div>
+      </div>
+     
+      <div class="macro-progress-wrapper">
+
+        <div class ="macro-progress">
+          <label for ="protein"> Total protein ate today {totalProtein}</label>
+          <progress class ="protein-prog" id ="protein" max = {170} value={totalProtein.toFixed(2)}></progress>
+        </div>
+        
 
 
-<div class= "marco-input-wrapper">
-  <div class = "input-box">
-    <div>
-      <label for = "breakFastLabel">Breakfast</label>
-      <input
-        id ="breakFastLabel"
-        type ="text"
-        bind:value={breakFastQ}
-        />
-        <button on:click={()=> getFoodData('breakfast', breakFastQ)}>Add</button>
-    </div>
-    <!--User input block where they can log their calories-->
-    <!-- It should be that they can search up their food and the food API puts the info into here-->
-    <div>
-      <label for = "lunchLabel">Lunch</label>
-      <input
-        id ="lunchLabel"
-        type ="text"
-        bind:value={lunchQ}
-        />
-        <button on:click={()=> getFoodData('lunch', lunchQ)}>Add</button>
-    </div>
-    <div>
-      <label for = "dinnerLabel">Dinner</label>
-      <input
-        id ="dinnerLabel"
-        type ="text"
-        bind:value={dinnerQ}
-        />
-        <button on:click={()=> getFoodData('dinner', dinnerQ)}>Add</button>
-    </div>
-    <div>
-      <label for = "snacksLabel">Snacks</label>
-      <input
-        id ="snacksLabel"
-        type ="text"
-        bind:value={snacksQ}
-        />
-        <button on:click={()=> getFoodData('snacks', snacksQ)}>Add</button>
+        <div class ="macro-progress">
+          <label for ="carbs">Total carbohydrates ate today {totalCarbs}</label>
+          <progress class ="carbs-prog"  id ="carbs" max = {250} value={totalCarbs.toFixed(2)}></progress>
+        </div>
+          
+
+        <div class ="macro-progress">
+          <label for ="fats">Total fats ate today {totalFats}</label>
+          <progress class="fats-prog" id ="fats" max = {75} value={totalFats.toFixed(2)}></progress>
+        </div>
+          
+      </div>
     </div>
   </div>
-      
-  <div class="macro-progress-wrapper">
-    <label for ="protein">Protein</label>
-    <progress  id ="protein" max = {calorieBudget} value={progress.current}></progress>
 
-    <label for ="carbs">Carbohydrates</label>
-    <progress id ="carbs" max = {calorieBudget} value={progress.current}></progress>
 
-    <label for ="fats">Fats</label>
-    <progress id ="fats" max = {calorieBudget} value={progress.current}></progress>
-  </div>
+  <div class="display-info-wrapper">
+      <h2>Meals Eaten Today</h2>
+
+      {#each Object.entries(mealList) as [mealName, items]}
+        <div class="meal-stats">
+          <h3>{mealName.charAt(0).toUpperCase() + mealName.slice(1)}</h3>
+          {#if items.length > 0}
+            <ul>
+              {#each items as item }
+                <li>{item.name} - {item.grams}g</li>
+              {/each}
+            </ul>
+            {:else}
+              <p>No Food Found! Please Add it!</p>
+            {/if}
+        </div>
+      {/each}
+    </div>
 </div>
 
 
-<div class="display-info-wrapper">
-  <h2>Meals Eaten Today</h2>
+   
 
-  {#each Object.entries(mealList) as [mealName, items]}
-    <div class="meal-stats">
-      <h3>{mealName.charAt(0).toUpperCase() + mealName.slice(1)}</h3>
-      {#if items.length > 0}
-        <ul>
-          {#each items as item }
-            <li>{item}</li>
-          {/each}
-        </ul>
-        {:else}
-          <p>No Food Found! Please Add it!</p>
-        {/if}
-    </div>
-  {/each}
-</div>
+
+
   
   <!---Subject to change-->
   <style>
+
+    .report-layout{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      align-items: start;
+      margin: 0 auto;
+    }
+
+    .left-side{
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
     .display-info-wrapper{
       margin-top: 2rem;
       padding: 1.5rem;
@@ -227,10 +254,18 @@
       border-radius: 15px;
       margin-left: auto;
       margin-right: auto;
+      width: 500px;
     }
-  
+    .macro-progress{
+      margin-top: 2rem;
+    }
+    .add-button{
+      border-radius: 5px;
+    }
+
     .meal-stats{
       margin-bottom: 2rem;
+      background-color: #b0acaa;
     }
 
     .marco-input-wrapper{
@@ -272,7 +307,7 @@
     .progress-container {
       display: flex;
       justify-content: center;
-      margin: 1rem auto 0 auto;
+      margin: 0.25rem auto 0 auto;
     }
     progress{
       width: 100%;
@@ -282,6 +317,25 @@
       overflow: hidden;
     }
 
+
+
+    .cals-prog::-moz-progress-bar{
+      background-color: green;
+
+    }
+    .fats-prog::-moz-progress-bar{
+      background-color: red;
+
+    }
+    .protein-prog::-moz-progress-bar{
+      background-color: blue;
+
+    }
+
+    .carbs-prog::-moz-progress-bar{
+      background-color: yellow;
+
+    }
    
 
   </style>
