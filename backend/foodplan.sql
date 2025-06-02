@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS goals;
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   email TEXT PRIMARY KEY,
   name TEXT,
   gender TEXT,
@@ -11,10 +11,13 @@ CREATE TABLE users (
   activity_level REAL
 );
 
-CREATE TABLE goals (
+CREATE TABLE IF NOT EXISTS goals (
     email TEXT PRIMARY KEY,
-    target_weight REAL,
-    duration_days INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    goal_type TEXT NOT NULL CHECK(goal_type IN ('lose','maintain','gain')),
+    starting_weight REAL NOT NULL,
+    latest_weight REAL NOT NULL,
+    target_weight REAL NOT NULL,
+    duration_days INTEGER NOT NULL,
+    start_date TEXT NOT NULL,
     FOREIGN KEY (email) REFERENCES users(email)
 );

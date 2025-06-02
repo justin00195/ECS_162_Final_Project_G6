@@ -169,48 +169,79 @@ def calculate():
 @app.route('/goal', methods=['GET'])
 def get_goal():
     user = session.get('user')
+    if not user:
+        return jsonify({"error": "Not authenticated"}), 401
+    
     email = user['email']
     cnx = get_db_connection()
     cursor = cnx.cursor()
-    cursor.execute("SELECT target_weight, duration_days FROM goals WHERE email = ?", (email,))
+    cursor.execute("""
+        SELECT goal_type, starting_weight, latest_weight, target_weight, 
+               duration_days, start_date 
+        FROM goals 
+        WHERE email = ?
+    """, (email,))
     row = cursor.fetchone()
     cnx.close()
+    
+    if not row:
+        return jsonify({"error": "No goal found"}), 404
+        
     return jsonify({
+        "goal_type": row["goal_type"],
+        "starting_weight": row["starting_weight"],
+        "latest_weight": row["latest_weight"],
         "target_weight": row["target_weight"],
-        "duration_days": row["duration_days"]
+        "duration_days": row["duration_days"],
+        "start_date": row["start_date"]
     })
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    response = redirect(frontend_url)
-    response.set_cookie('session', '', expires=0)
-    return response
 
 @app.route('/goal', methods=['POST'])
 def set_goal():
     user = session.get('user')
+    if not user:
+        return jsonify({"error": "Not authenticated"}), 401
+        
     email = user['email']
     data = request.get_json()
-    target_weight = data.get('target_weight')
-    duration_days = data.get('duration_days')
+    
+    # Validate required fields
+    required_fields = ['goal_type', 'starting_weight', 'latest_weight', 
+                      'target_weight', 'duration_days', 'start_date']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"error": f"Missing required field: {field}"}), 400
+    
     cnx = get_db_connection()
     cursor = cnx.cursor()
-    cursor.execute("SELECT weight FROM users WHERE email = ?", (email,))
-    row = cursor.fetchone()
-    current_weight = row['weight']
-
-    # calculate calories suggestion
-    weight_diff = target_weight - current_weight
+    
+    # Calculate calories suggestion
+    weight_diff = data['target_weight'] - data['starting_weight']
     calories_need = weight_diff * 7700
-    calories_sug = round(calories_need / duration_days)
+    calories_sug = round(calories_need / data['duration_days'])
+    
     cursor.execute("""
-        INSERT INTO goals (email, target_weight, duration_days)
-        VALUES (?, ?, ?)
+        INSERT INTO goals (
+            email, goal_type, starting_weight, latest_weight, 
+            target_weight, duration_days, start_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(email) DO UPDATE SET
-            target_weight=excluded.target_weight,
-            duration_days=excluded.duration_days
-    """, (email, target_weight, duration_days))
+            goal_type = excluded.goal_type,
+            starting_weight = excluded.starting_weight,
+            latest_weight = excluded.latest_weight,
+            target_weight = excluded.target_weight,
+            duration_days = excluded.duration_days,
+            start_date = excluded.start_date
+    """, (
+        email,
+        data['goal_type'],
+        data['starting_weight'],
+        data['latest_weight'],
+        data['target_weight'],
+        data['duration_days'],
+        data['start_date']
+    ))
+    
     cnx.commit()
     cnx.close()
 
@@ -218,6 +249,21 @@ def set_goal():
         'message': 'Goal saved successfully!',
         'calories_sug': calories_sug
     })
+
+@app.route('/goal', methods=['DELETE'])
+def delete_goal():
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "Not authenticated"}), 401
+        
+    email = user['email']
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute("DELETE FROM goals WHERE email = ?", (email,))
+    cnx.commit()
+    cnx.close()
+    
+    return jsonify({"message": "Goal deleted successfully"})
 
 #Report Page
 @app.route('/report', methods=['POST'])
