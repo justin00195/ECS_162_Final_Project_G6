@@ -1,7 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {Tween} from 'svelte/motion'
+  import {get} from 'svelte/store';
   import { cubicOut } from 'svelte/easing';
+  import { allTDEE } from '../stores/tdee';
+  import '../assets/report.scss';
   
   
 
@@ -10,8 +13,11 @@
   // calorieBudget should be calcualted from the goalpage
   // some how need to pull info from api about macros 
   //3 main marcos are protien, fats, carbs
-
-  let calorieBudget = 1000;
+  const tdee = get(allTDEE)
+  if (tdee === null){
+    throw new Error("Please LOGIN for TDEE value")
+  }
+  let calorieBudget = tdee - 1000;
   let breakFast = 0;
   let lunch = 0;
   let dinner = 0;
@@ -234,108 +240,7 @@
 <!---Subject to change-->
 <style>
 
-  .report-layout{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    align-items: start;
-    margin: 0 auto;
-  }
-
-  .left-side{
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-  .display-info-wrapper{
-    margin-top: 2rem;
-    padding: 1.5rem;
-    background-color: #b0acaa;
-    border-radius: 15px;
-    margin-left: auto;
-    margin-right: auto;
-    width: 500px;
-  }
-  .macro-progress{
-    margin-top: 2rem;
-  }
-  .add-button{
-    border-radius: 5px;
-  }
-
-  .meal-stats{
-    margin-bottom: 2rem;
-    background-color: #b0acaa;
-  }
-
-  .marco-input-wrapper{
-    display:grid;
-    grid-template-columns: repeat(2,1fr);
-    gap:2rem;
-    margin-top:2rem;
-  }
   
-  .macro-progress-wrapper{
-     gap:1rem;
-     background-color:#b0acaa;
-     border-radius: 10px;
-     max-width: 450px;
-     padding: 1rem;
-  }
-  
-  .input-box{
-    display: grid;
-    grid-template-columns: repeat(2,1fr);
-    gap:1rem;
-    max-width: 450px;
-    margin: 1rem auto;
-    background-color: #DFD3CC;
-    border-radius: 10px;
-    padding: 2rem;
-  }
-  .progress-wrapper{
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 500px;
-  }
-  .progress-label{
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 0.5rem;
-  }
-  .progress-container {
-    display: flex;
-    justify-content: center;
-    margin: 0.25rem auto 0 auto;
-  }
-  progress{
-    width: 100%;
-    height: 30px;
-    appearance: none;
-    border-radius: 15px;
-    overflow: hidden;
-  }
-
-
-
-  .cals-prog::-moz-progress-bar{
-    background-color: green;
-
-  }
-  .fats-prog::-moz-progress-bar{
-    background-color: red;
-
-  }
-  .protein-prog::-moz-progress-bar{
-    background-color: blue;
-
-  }
-
-  .carbs-prog::-moz-progress-bar{
-    background-color: yellow;
-
-  }
  
 
 </style>
