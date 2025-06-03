@@ -10,6 +10,7 @@ clientID = os.getenv("OIDC_CLIENT_ID")
 reDirect = 'http://localhost:8000/auth/callback'
 frontend_url = os.getenv("FRONTEND_URL")
 cal_api_key = os.getenv("CAL_NJ_API_KEY")
+recipe_API_KEY = os.getenv("recipe_API_KEY")
 
 DEX_TOKEN_URL = 'http://dex:5556/token'
 DEX_USERINFO_URL = 'http://dex:5556/userinfo'
@@ -291,6 +292,33 @@ def get_recipes():
             {"name": "chicken", "calories": 500} #should we implement from api?
         ]
     })
+
+@app.route('/api/recipe')
+def get_recipe():
+    query = request.args.get('query', '')
+    
+    #https://www.themealdb.com/api.php
+    res = requests.get(f'https://www.themealdb.com/api/json/v1/1/search.php?s={query}')
+    
+    if res.status_code == 200:
+        data = res.json()
+        meals = data.get('meals', [])
+        
+        if meals:
+            recipes = []
+            for meal in meals:
+                recipes.append({
+                    'title': meal['strMeal'],
+                    'instructions': meal['strInstructions'][:200] + '...',
+                    'image': meal.get('strMealThumb', ''),
+                    'ingredients': meal.get('strIngredients', '')
+                })
+            print(f"Got {len(recipes)} recipes for '{query}'")
+            return jsonify(recipes)
+        else:
+            return jsonify([])
+    else:
+        return jsonify({"error": "FAILED TO GET RECIPE DATA"})
 
 if __name__ == '__main__':
     init_db()

@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "@types/node": "^22.15.23"
+  },
+  "dependencies": {
+    "svelte-spa-router": "^4.0.1"
   }
 }

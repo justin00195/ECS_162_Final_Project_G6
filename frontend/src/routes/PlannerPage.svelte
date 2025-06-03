@@ -1,18 +1,63 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-  
-    let plan: any = {};
-  
-    onMount(async () => {
-      const res = await fetch('http://localhost:8000/plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
-    });
+  import { onMount } from 'svelte';
+  import location from 'svelte-spa-router';
 
-  </script>
+  let plan: any = {};
+  let search = '';
+  let results = [];
+  let loading = false; // Add loading state
+
+  async function recipeLookup(){
+    if (!search.trim()) return;
+    
+    loading = true;
+    results = []; // Clear immediately
+    
+    try {
+      console.log(`Searching for: "${search}"`);
+      const res = await fetch(`http://localhost:8000/api/recipe?query=${encodeURIComponent(search)}`);
+      const data = await res.json();
+      console.log('API response:', data);
+      
+      if (Array.isArray(data)) {
+        results = data;
+      } else if (data.items) {
+        results = data.items;
+      } else {
+        results = [];
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      results = [];
+    } finally {
+      loading = false;
+    }
+  }
   
-  <h1>Planner Page</h1>
-  <pre>{JSON.stringify(plan, null, 2)}</pre>
-  
+  function viewRecipe(title) {
+    window.location.hash = `#/recipe/${encodeURIComponent(title)}`;
+  }
+</script>
+
+<h1>Planner Page</h1>
+
+<h2>Browse Recipes</h2>
+<input bind:value={search} placeholder="Search for a recipe" />
+<button on:click={recipeLookup} disabled={loading}>
+{loading ? 'Searching...' : 'Search'}
+</button>
+
+{#if loading}
+<p>Loading recipes...</p>
+{:else if results.length > 0}
+<h3>Search Results for "{search}"</h3>
+<ul>
+  {#each results as recipe}
+    <li>
+      <button on:click={() => viewRecipe(recipe.title)}>
+        {recipe.title}
+      </button>
+    </li>
+  {/each}
+</ul>
+{/if}

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-  
+    //https://www.npmjs.com/package/svelte-spa-router
     let recipes: Array<{ name: string; calories: number }> = [];
   
     onMount(async () => {

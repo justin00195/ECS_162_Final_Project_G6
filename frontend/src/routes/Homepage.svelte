@@ -63,7 +63,7 @@ function userLogout() {
       <nav>
         <button on:click={() => currentPage = 'calculator'}>Calculator</button>
         <button on:click={() => currentPage = 'goal'}>Goal</button>
-        <button on:click={() => currentPage = 'planner'}>Planner</button>
+        <button on:click={() => currentPage = 'planner'}>Meal Planner</button>
         <button on:click={() => currentPage = 'report'}>Report</button>
         <button on:click={() => currentPage = 'recipe'}>Recipe</button>
         <div>
