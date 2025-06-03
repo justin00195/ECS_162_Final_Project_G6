@@ -66,15 +66,25 @@
     }
   }
 
-  function formatMealDbIngredients(meal: any): string {
-    const ingredients = [];
-    //*TO BE COMPLETED
-    // Return as pipe-separated string to match your existing format
-    return ingredients.join('|');
+  function formatMealDbIngredients(meal: any): string[] {
+    const ingredients: string[] = [];
+
+    for (let i = 1; i <= 20; i++) {
+      const ingredient = meal[`strIngredient${i}`];
+      const measure = meal[`strMeasure${i}`];
+
+      if (ingredient && ingredient.trim()) {
+        const formatted = measure && measure.trim()
+          ? `${measure.trim()} ${ingredient.trim()}`
+          : ingredient.trim();
+        ingredients.push(formatted);
+      }
+    }
+    return ingredients;
   }
 
   function goBack() {
-    //make it go back to search page
+    window.location.hash = "#/planner";
   }
 
 </script>
@@ -110,7 +120,7 @@
               </h2>
               {#if recipe.ingredients}
                 <ul class="ingredients-list">
-                  {#each formatIngredients(recipe.ingredients) as ingredient}
+                  {#each recipe.ingredients as ingredient}
                     <li class="ingredientList">{ingredient}</li>
                   {/each}
                 </ul>

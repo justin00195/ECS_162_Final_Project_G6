@@ -4,7 +4,7 @@
 
   let plan: any = {};
   let search = '';
-  let results = [];
+  let results: any[] = [];
   let loading = false; // Add loading state
 
   async function recipeLookup(){
@@ -34,7 +34,7 @@
     }
   }
   
-  function viewRecipe(title) {
+  function viewRecipe(title: string) {
     window.location.hash = `#/recipe/${encodeURIComponent(title)}`;
   }
 </script>
