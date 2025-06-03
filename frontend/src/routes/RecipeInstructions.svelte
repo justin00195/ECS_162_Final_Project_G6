@@ -10,53 +10,50 @@
 
     onMount(async () => {
     if (params.title) {
-      await getRecipeInfo(decodeURIComponent(params.title));
+      await getRecipeInfo(decodeURIComponent(recipeTitle));
     }
   });
+
+  function formatIngredients(meal: any): string[] {
+    return meal.ingredients.split("|");
+  }
+
+  function formatInstructions(meal: any): string[] {
+    // split by '.' and trim extra whitespace
+    return meal.instructions.split(".").map((s: string) => s.trim()).filter(Boolean);
+  }
 
   async function getRecipeInfo(mealName: string) {
     try {
       loading = true;
       
     // Search for meal by name to get the meal ID
-      const dbLookup = `https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(mealName)}`;
+      //const dbLookup = `https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(mealName)}`;
       //console.log('DEBUG - Search URL:', searchUrl);
       
-      const res = await fetch(dbLookup);
+      //const res = await fetch(dbLookup);
+      //const searchData = await res.json();
+
+      const res = await fetch(`http://localhost:8000/api/recipe?query=${encodeURIComponent(mealName)}`, {
+          method: 'GET',
+          credentials: 'include'
+      });
       const searchData = await res.json();
       
-      if (!searchData.meals || searchData.meals.length === 0) {
+      if (!searchData.items || searchData.items.length === 0) {
         errorMessage = 'Recipe not found';
         return;
       }
       
-      // Get the first matching meal's ID
-      const mealId = searchData.meals[0].idMeal;
-      const infoUrl = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${mealId}`;
-      
-      const infoRes = await fetch(infoUrl);
-      const detailsData = await infoRes.json();
-      
-      console.log('DEBUG - Details API Response:', detailsData);
-      
-      if (detailsData.meals && detailsData.meals.length > 0) {
-        const meal = detailsData.meals[0];
+       const meal = searchData.items[0];
         
         recipe = {
-          title: meal.strMeal,
-          ingredients: formatMealDbIngredients(meal),
-          instructions: meal.strInstructions,
-          image: meal.strMealThumb,
-          category: meal.strCategory,
-          area: meal.strArea,
-          youtube: meal.strYoutube,
-          mealId: meal.idMeal
+          title: meal.title,
+          ingredients: formatIngredients(meal),
+          instructions: formatInstructions(meal),
+          servings: meal.servings,
+          image: meal.image
         };
-        
-      } else {
-        errorMessage = 'Failed to fetch recipe details';
-        console.log('DEBUG - No details found for meal ID:', mealId);
-      }
       
     } catch (err) {
       errorMessage = 'Failed to load recipe details';
@@ -66,22 +63,6 @@
     }
   }
 
-  function formatMealDbIngredients(meal: any): string[] {
-    const ingredients: string[] = [];
-
-    for (let i = 1; i <= 20; i++) {
-      const ingredient = meal[`strIngredient${i}`];
-      const measure = meal[`strMeasure${i}`];
-
-      if (ingredient && ingredient.trim()) {
-        const formatted = measure && measure.trim()
-          ? `${measure.trim()} ${ingredient.trim()}`
-          : ingredient.trim();
-        ingredients.push(formatted);
-      }
-    }
-    return ingredients;
-  }
 
   function goBack() {
     window.location.hash = "#/planner";
@@ -104,14 +85,15 @@
         <h2>Error!</h2>
       {:else if recipe}
         <article class="recipe">
-          <header>
-            <h1>{recipe.title}</h1>
-              
+          <h1>{recipe.title}</h1>
+
           {#if recipe.image}
-            <div class="foodPic">
-              <img src={recipe.image} alt={recipe.title} loading="lazy" />
-            </div>
+            <img src={recipe.image} alt={recipe.title} loading="lazy" />
           {/if}
+
+          {#if recipe.servings}
+            <p>Makes {recipe.servings} servings</p>
+            {/if}
   
           <div class="content">
             <section class="ingredients">
@@ -134,9 +116,9 @@
             <section class="instructions">
               <h2>Instructions</h2>
               {#if recipe.instructions}
-                <div class="textInfo">
-                  {recipe.instructions}
-                </div>
+                {#each recipe.instructions as step}
+                  <p>{step}.</p>
+                {/each}
               {:else}
                 <div class="no-data">
                   <p>No cooking instructions available for this recipe</p>

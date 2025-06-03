@@ -10,7 +10,7 @@ clientID = os.getenv("OIDC_CLIENT_ID")
 reDirect = 'http://localhost:8000/auth/callback'
 frontend_url = os.getenv("FRONTEND_URL")
 cal_api_key = os.getenv("CAL_NJ_API_KEY")
-recipe_API_KEY = os.getenv("recipe_API_KEY")
+spoonacular_API_KEY = os.getenv("SPOONACULAR_API_KEY")
 
 DEX_TOKEN_URL = 'http://dex:5556/token'
 DEX_USERINFO_URL = 'http://dex:5556/userinfo'
@@ -293,32 +293,66 @@ def get_recipes():
         ]
     })
 
-@app.route('/api/recipe')
+@app.route('/api/recipe', methods=['GET'])
 def get_recipe():
     query = request.args.get('query', '')
+    if not query:
+        return jsonify({"error": "Missing food query"}), 400
     
-    #https://www.themealdb.com/api.php
-    res = requests.get(f'https://www.themealdb.com/api/json/v1/1/search.php?s={query}')
+    api_url = 'https://api.spoonacular.com/recipes/complexSearch'
     
-    if res.status_code == 200:
-        data = res.json()
-        meals = data.get('meals', [])
+    params = {
+        'query': query,
+        'apiKey': spoonacular_API_KEY,
+        'number': 10,
+        'addRecipeInformation': True,
+        'fillIngredients': True,
+        'addRecipeInstructions': True,
+    }
+    
+    try:
+        res = requests.get(api_url, params=params)
         
-        if meals:
-            recipes = []
-            for meal in meals:
-                recipes.append({
-                    'title': meal['strMeal'],
-                    'instructions': meal['strInstructions'][:200] + '...',
-                    'image': meal.get('strMealThumb', ''),
-                    'ingredients': meal.get('strIngredients', '')
-                })
-            print(f"Got {len(recipes)} recipes for '{query}'")
-            return jsonify(recipes)
+        if res.status_code == 200:
+            data = res.json()
+            recipes = data.get('results', [])
+            
+            items = []
+            for recipe in recipes:
+                # Extract ingredients
+                ingredients = []
+                for ing in recipe.get('extendedIngredients', []):
+                    amount = ing.get('amount', '')
+                    unit = ing.get('unit', '')
+                    name = ing.get('name', '')
+                    ingredients.append(f"{amount} {unit} {name}".strip())
+                
+                # Extract instructions
+                instructions = []
+                for instruction_group in recipe.get('analyzedInstructions', []):
+                    for step in instruction_group.get('steps', []):
+                        instructions.append(step.get('step', ''))
+                
+                item = {
+                    'title': recipe.get('title', ''),
+                    'ingredients': '|'.join(ingredients),
+                    'instructions': '. '.join(instructions),
+                    'servings': str(recipe.get('servings', '')),
+                    'image': recipe.get('image', '')
+                }
+                items.append(item)
+            
+            return jsonify({"items": items})
         else:
-            return jsonify([])
-    else:
-        return jsonify({"error": "FAILED TO GET RECIPE DATA"})
+            return jsonify({
+                "error": "Failed to fetch recipes",
+                "status": res.status_code,
+                "message": res.text
+            }), res.status_code
+            
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     init_db()
