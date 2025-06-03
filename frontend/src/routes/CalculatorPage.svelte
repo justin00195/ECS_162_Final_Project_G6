@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import '../assets/calculator.scss';
+  import { allTDEE } from '../stores/tdee';
+
 
   let bmr = 0;
   let tdee = 0;
@@ -46,6 +48,7 @@
       }
       bmr = data.bmr;
       tdee = data.tdee;
+      allTDEE.set(data.tdee);
       showResults = true;
       const results = document.querySelector('.results');
       if (results) {
