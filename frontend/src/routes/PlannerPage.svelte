@@ -1,11 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import location from 'svelte-spa-router';
   import '../assets/planner.scss'
+  import DisplayRecipes from './DisplayRecipes.svelte';
+  import { fetchFavorites } from '../stores/favorites';
+  import { get } from 'svelte/store';
 
   let plan: any = {};
   let search = '';
-  let results: any[] = [];
+  let results: string[] = []; // Recipe titles
   let loading = false; // Add loading state
 
   async function recipeLookup(){
@@ -21,13 +23,9 @@
       });
       const data = await res.json();
       console.log('API response:', data);
-      
-      if (Array.isArray(data)) {
-        results = data;
-      } else if (data.items) {
-        results = data.items;
-      } else {
-        results = [];
+
+      for (let i = 0; i < data.items.length; i++){
+        results.push(data.items[i].title);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -36,33 +34,26 @@
       loading = false;
     }
   }
-  
-  function viewRecipe(title: string) {
-    window.location.hash = `#/recipe/${encodeURIComponent(title)}`;
-  }
+
+  onMount(async () => {
+    await fetchFavorites();
+  });
+
 </script>
 
 <div class="container">
-  <h1>Planner Page</h1>
-
-  <h2>Browse Recipes</h2>
+  <h1>Browse Recipes</h1>
   <input bind:value={search} placeholder="Search for a recipe" />
   <button on:click={recipeLookup} disabled={loading}>
-  {loading ? 'Searching...' : 'Search'}
+    {loading ? 'Searching...' : 'Search'}
   </button>
 
   {#if loading}
-  <p>Loading recipes...</p>
+    <p>Loading recipes...</p>
   {:else if results.length > 0}
-  <h3>Search Results for "{search}"</h3>
-  <ul>
-    {#each results as recipe}
-      <li>
-        <button on:click={() => viewRecipe(recipe.title)}>
-          {recipe.title}
-        </button>
-      </li>
-    {/each}
-  </ul>
+    <DisplayRecipes
+      category="Search Results"
+      results={results}
+    />
   {/if}
 </div>

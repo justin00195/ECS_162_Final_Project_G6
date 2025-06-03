@@ -18,7 +18,13 @@ DEX_USERINFO_URL = 'http://dex:5556/userinfo'
 
 app = Flask(__name__, static_folder='dist', static_url_path='')
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": frontend_url}})
-app.secret_key = secrets.token_hex(16)
+app.secret_key = os.getenv("SECRET_KEY")
+app.config.update(
+    SESSION_COOKIE_SECURE=False,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax'
+)
+
 @app.route('/')
 def index():
     return send_from_directory(app.static_folder, 'index.html')
@@ -353,6 +359,89 @@ def get_recipe():
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
+
+# add recipe to favorites
+@app.route('/api/favorites', methods=['POST'])
+def add_favorite():
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "Not authenticated"}), 401
+        
+    email = user['email']
+    data = request.get_json()
+    recipe = data['recipe']
+
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+
+    # Check if already exists
+    cursor.execute(
+        "SELECT 1 FROM favorite_recipes WHERE email = ? AND recipe_title = ?", 
+        (email, recipe)
+    )
+    cursor.execute("""
+        INSERT INTO favorite_recipes (email, recipe_title) VALUES (?, ?)""", 
+    (email, recipe))
+
+    cnx.commit()
+    cnx.close()
+
+    return jsonify({
+        'sucess': True
+    })
+
+# get user's favorite recipes
+@app.route('/api/favorites', methods=['GET'])
+def get_favorites():
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "Not authenticated"}), 401
+        
+    email = user['email']
+
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+
+    cursor.execute(
+        """SELECT recipe_title FROM favorite_recipes WHERE email = ?""",
+        (email,)
+    )
+
+    favorites = [row['recipe_title'] for row in cursor.fetchall()]
+    cnx.close()
+
+    return jsonify({'favorites': favorites})
+
+# remove recipe from user's favorites
+@app.route('/api/favorites', methods=['DELETE'])
+def remove_favorite():
+
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "Not authenticated"}), 401
+        
+    email = user['email']
+    data = request.get_json()
+    recipe = data['recipe']
+
+    if not email or not recipe:
+        return jsonify({'error': 'Missing email or recipe'}), 400
+
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+
+    try:
+        cursor.execute(
+            """DELETE FROM favorite_recipes WHERE email = ? AND recipe_title = ?""",
+            (email, recipe)
+        )
+        cnx.commit()
+        cnx.close()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     init_db()

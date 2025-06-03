@@ -21,3 +21,10 @@ CREATE TABLE IF NOT EXISTS goals (
     start_date TEXT NOT NULL,
     FOREIGN KEY (email) REFERENCES users(email)
 );
+
+CREATE TABLE IF NOT EXISTS favorite_recipes (
+  email TEXT,
+  recipe_title TEXT,
+  PRIMARY KEY (email, recipe_title),
+  FOREIGN KEY (email) REFERENCES users(email)
+);
