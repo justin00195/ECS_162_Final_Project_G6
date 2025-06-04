@@ -16,7 +16,7 @@ const routes = {
     '/recipe': RecipePage,
     '/user-portal': UserPortal,
     '/recipe/:title': RecipeInstructions,
-    '*': PlannerPage
+   // '*': PlannerPage
 };
 
 export default routes;

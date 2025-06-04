@@ -1,26 +1,46 @@
 <script lang="ts">
     export let params;
     import {onMount} from 'svelte';
+    import {selectedRecipe} from '../stores/recipe';
+    import {get} from 'svelte/store';
 
 
     let recipeTitle = decodeURIComponent(params.title);
     let recipe: any = null;
-    let loading = true;
+    let loading = null;
     let errorMessage ='';
 
-    onMount(async () => {
+    /*onMount(async () => {
     if (params.title) {
       await getRecipeInfo(decodeURIComponent(recipeTitle));
     }
-  });
+  })*/
+    onMount(()=>{
+      const meal = get(selectedRecipe);
+      if(!meal){
+        errorMessage = 'Recipe Not Found BUGGGGGG'
+        return;
+      }
+
+      recipe = {
+          title: meal.title,
+
+          ingredients: formatIngredients(meal),
+          instructions: formatInstructions(meal),
+          servings: meal.servings,
+          image: meal.image
+        };
+        loading = false;
+
+    });
 
   function formatIngredients(meal: any): string[] {
     return meal.ingredients.split("|");
   }
 
   function formatInstructions(meal: any): string[] {
-    // split by '.' and trim extra whitespace
     return meal.instructions.split(".").map((s: string) => s.trim()).filter(Boolean);
+
   }
 
   async function getRecipeInfo(mealName: string) {
@@ -33,15 +53,18 @@
       
       //const res = await fetch(dbLookup);
       //const searchData = await res.json();
-
+      console.log(mealName)
       const res = await fetch(`http://localhost:8000/api/recipe?query=${encodeURIComponent(mealName)}`, {
           method: 'GET',
           credentials: 'include'
+    
       });
       const searchData = await res.json();
       
       if (!searchData.items || searchData.items.length === 0) {
         errorMessage = 'Recipe not found';
+        console.log(searchData.items)
+        console.log(searchData.items.length)
         return;
       }
       
@@ -55,9 +78,9 @@
           image: meal.image
         };
       
-    } catch (err) {
+    } catch (error) {
       errorMessage = 'Failed to load recipe details';
-      console.error('Error fetching recipe:', err);
+      console.error('Error fetching recipe:', error);
     } finally {
       loading = false;
     }
@@ -65,6 +88,7 @@
 
 
   function goBack() {
+    selectedRecipe.set(null)
     window.location.hash = "#/planner";
   }
 
@@ -82,7 +106,7 @@
           <p>Loading your delicious recipe...</p>
         </div>
       {:else if errorMessage}
-        <h2>Error!</h2>
+        <h2>{errorMessage}</h2>
       {:else if recipe}
         <article class="recipe">
           <h1>{recipe.title}</h1>

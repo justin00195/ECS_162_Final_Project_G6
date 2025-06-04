@@ -4,10 +4,11 @@
   import DisplayRecipes from './DisplayRecipes.svelte';
   import { fetchFavorites } from '../stores/favorites';
   import { get } from 'svelte/store';
+  import { selectedRecipe} from '../stores/recipe'
 
   let plan: any = {};
   let search = '';
-  let results: string[] = []; // Recipe titles
+  let results: any[] = []; //instead of storing just the titles, fetch all info
   let loading = false; // Add loading state
 
   async function recipeLookup(){
@@ -24,9 +25,10 @@
       const data = await res.json();
       console.log('API response:', data);
 
-      for (let i = 0; i < data.items.length; i++){
+      /*for (let i = 0; i < data.items.length; i++){
         results.push(data.items[i].title);
-      }
+      }*/
+     results = data.items;
     } catch (error) {
       console.error('Error:', error);
       results = [];
@@ -34,6 +36,11 @@
       loading = false;
     }
   }
+
+  /*function tempRecipeInfo(recipe: any){
+    selectedRecipe.set(recipe);
+    window.location.hash = `#/recipe/${encodeURIComponent(title)}`
+  }*/
 
   onMount(async () => {
     await fetchFavorites();
