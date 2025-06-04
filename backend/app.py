@@ -3,7 +3,7 @@ from flask_cors import CORS
 import os
 import secrets
 import requests
-from db import get_db_connection
+from db import get_db_connection, init_db
 
 clientSecret = os.getenv("OIDC_CLIENT_SECRET")
 clientID = os.getenv("OIDC_CLIENT_ID")
@@ -18,7 +18,7 @@ DEX_USERINFO_URL = 'http://dex:5556/userinfo'
 
 app = Flask(__name__, static_folder='dist', static_url_path='')
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": frontend_url}})
-app.secret_key = os.getenv("SECRET_KEY")
+app.secret_key = secrets.token_hex(16)
 app.config.update(
     SESSION_COOKIE_SECURE=False,
     SESSION_COOKIE_HTTPONLY=True,

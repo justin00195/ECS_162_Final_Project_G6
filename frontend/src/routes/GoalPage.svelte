@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { calAdjust } from '../stores/calAdjust';
 
   let currentWeight = 0;
   let startingWeight = 0;
@@ -94,6 +95,7 @@
       }
       hasExistingGoal = true;
       calorieAdjust = data.calories_sug;
+      calAdjust.set(data.calories_sug)
       message = data.message;
 
       // Update saved values after successful submission

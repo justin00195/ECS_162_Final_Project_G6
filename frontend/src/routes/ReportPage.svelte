@@ -4,6 +4,7 @@
   import {get} from 'svelte/store';
   import { cubicOut } from 'svelte/easing';
   import { allTDEE } from '../stores/tdee';
+  import { calAdjust } from '../stores/calAdjust';
   import '../assets/report.scss';
   
   
@@ -17,7 +18,12 @@
   if (tdee === null){
     throw new Error("Please LOGIN for TDEE value")
   }
-  let calorieBudget = tdee - 1000;
+
+  const calAdj = get(calAdjust)
+  if (calAdj === null){
+    throw new Error("Please LOGIN for Goal value")
+  }
+  let calorieBudget = tdee + (calAdj);
   let breakFast = 0;
   let lunch = 0;
   let dinner = 0;
