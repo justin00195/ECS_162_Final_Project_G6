@@ -302,44 +302,53 @@ def get_recipes():
 
 @app.route('/api/recipe', methods=['GET'])
 def get_recipe():
-    query = request.args.get('query', '')
-    if not query:
-        return jsonify({"error": "Missing food query"}), 400
-    
+    query = request.args.get('query')
+    min_calories = request.args.get('minCalories')
+    max_calories = request.args.get('maxCalories')
+    diets = request.args.getlist('diet')
+    meal_types = request.args.getlist('mealType')
+
     api_url = 'https://api.spoonacular.com/recipes/complexSearch'
     
     params = {
-        'query': query,
         'apiKey': spoonacular_API_KEY,
-        'number': 10,
+        'number': 20,
         'addRecipeInformation': True,
         'fillIngredients': True,
         'addRecipeInstructions': True,
     }
-    
+
+    if query:
+        params['query'] = query
+    if min_calories:
+        params['minCalories'] = min_calories
+    if max_calories:
+        params['maxCalories'] = max_calories
+    if diets:
+        params['diet'] = ','.join(diets)
+    if meal_types:
+        params['type'] = ','.join(meal_types)
+
     try:
         res = requests.get(api_url, params=params)
-        
+
         if res.status_code == 200:
             data = res.json()
             recipes = data.get('results', [])
-            
+
             items = []
             for recipe in recipes:
-                # Extract ingredients
-                ingredients = []
-                for ing in recipe.get('extendedIngredients', []):
-                    amount = ing.get('amount', '')
-                    unit = ing.get('unit', '')
-                    name = ing.get('name', '')
-                    ingredients.append(f"{amount} {unit} {name}".strip())
-                
-                # Extract instructions
-                instructions = []
-                for instruction_group in recipe.get('analyzedInstructions', []):
-                    for step in instruction_group.get('steps', []):
-                        instructions.append(step.get('step', ''))
-                
+                ingredients = [
+                    f"{ing.get('amount', '')} {ing.get('unit', '')} {ing.get('name', '')}".strip()
+                    for ing in recipe.get('extendedIngredients', [])
+                ]
+
+                instructions = [
+                    step.get('step', '')
+                    for instruction_group in recipe.get('analyzedInstructions', [])
+                    for step in instruction_group.get('steps', [])
+                ]
+
                 item = {
                     'title': recipe.get('title', ''),
                     'ingredients': '|'.join(ingredients),
@@ -348,7 +357,7 @@ def get_recipe():
                     'image': recipe.get('image', '')
                 }
                 items.append(item)
-            
+
             return jsonify({"items": items})
         else:
             return jsonify({
@@ -356,7 +365,7 @@ def get_recipe():
                 "status": res.status_code,
                 "message": res.text
             }), res.status_code
-            
+
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500

@@ -1,23 +1,26 @@
 <script lang="ts">
-	import { favoriteMap, toggleFavorite } from '../stores/favorites';
+  import { favoriteMap, toggleFavorite } from '../stores/favorites';
   import '../assets/displayRecipes.scss';
-	import {selectedRecipe} from '../stores/recipe'
+  import {selectedRecipe} from '../stores/recipe';
   export let category: string;
   export let results: any[];
 
-  function viewRecipe(title: string) {
-    window.location.hash = `#/recipe/${encodeURIComponent(recipe.title)}`;
-  }
+
   function tempRecipeInfo(recipe: any){
     selectedRecipe.set(recipe);
 	console.log(selectedRecipe)
     window.location.hash = `#/recipe/${encodeURIComponent(recipe.title)}`
   }
 
+  function showFilters(){
+    window.location.hash = `#/filter`
+  }
+
 </script>
 
 <div class="container">
 	<h2>{category}</h2>
+	<button on:click={showFilters}>Filter</button>
 	<ul class="results-list">
 		{#each results as result}
 			<li class="result">
