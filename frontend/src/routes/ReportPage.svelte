@@ -6,7 +6,7 @@
   import { allTDEE } from '../stores/tdee';
   import { calAdjust } from '../stores/calAdjust';
   import '../assets/report.scss';
-   import { storedLogin} from '../stores/isLogged';
+  //import { storedLogin} from '../stores/isLogged';
   
   
 
