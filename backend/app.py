@@ -11,6 +11,7 @@ reDirect = 'http://localhost:8000/auth/callback'
 frontend_url = os.getenv("FRONTEND_URL")
 cal_api_key = os.getenv("CAL_NJ_API_KEY")
 spoonacular_API_KEY = os.getenv("SPOONACULAR_API_KEY")
+usda_api_key = os.getenv("USDA_API_KEY")
 
 DEX_TOKEN_URL = 'http://dex:5556/token'
 DEX_USERINFO_URL = 'http://dex:5556/userinfo'
@@ -441,6 +442,46 @@ def remove_favorite():
         return jsonify({'success': True})
 
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/food/search', methods=['GET'])
+def search_food():
+    query = request.args.get('query', '')
+    page_size = request.args.get('pageSize', 5)
+
+    if not query:
+        return jsonify({'error': 'Missing query parameter'}), 400
+
+    try:
+        response = requests.get(
+            'https://api.nal.usda.gov/fdc/v1/foods/search',
+            params={
+                'api_key': usda_api_key,
+                'query': query,
+                'dataType': ['Foundation', 'SR Legacy'],
+                'pageSize': page_size
+            }
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        transformed_foods = [{
+            'name': food.get('description', ''),
+            'id': food.get('fdcId'),
+            'brandOwner': food.get('brandOwner'),
+            'category': (
+                food.get('foodCategory', {}).get('description')
+                if isinstance(food.get('foodCategory'), dict)
+                else None
+            )
+        } for food in data.get('foods', [])]
+
+        return jsonify({
+            'foods': transformed_foods,
+            'totalHits': data.get('totalHits', 0)
+        })
+
+    except requests.exceptions.RequestException as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
