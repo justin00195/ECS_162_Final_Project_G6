@@ -152,7 +152,7 @@
 
 
   <div class ="progress-info">
-    <div>Daily Budget:{calorieBudget} | Calories Eaten: {calsAte} | Budget Remaining:{calsLeft}</div> 
+    <div>Daily Budget: {calorieBudget} | Calories Eaten: {calsAte} | Budget Remaining: {calsLeft}</div> 
   </div>
   </div>
   </div>

@@ -85,6 +85,10 @@
   });
 
   const setGoal = async () => {
+    if (!startingWeight || !targetWeight || !duration) {
+      error = 'Please fill in all fields before submitting.';
+      return;
+    }
     error = '';
     try {
       const res = await fetch('http://localhost:8000/goal', {
@@ -167,6 +171,7 @@
       startingWeight = currentWeight;
       latestWeight = currentWeight;
       calorieAdjust = 0;  // Reset calorie adjustment
+      calAdjust.set(0);   // Reset the Svelte store as well
       message = '';       // Clear the message
 
       // Clear localStorage
@@ -322,7 +327,7 @@
             {#if showCalorieTooltip}
               <div class="tooltip">
                 This is calculated based on your weight difference and duration. 
-                For every 7700 calories, you gain or lose 1 kg of weight.
+                For every 7700 calories, you gain or lose 1 kg of weight. Your calorie adjustment will be applied to your daily calorie budget.
               </div>
             {/if}
           </div>
