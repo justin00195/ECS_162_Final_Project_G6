@@ -7,7 +7,7 @@
 
     let recipeTitle = decodeURIComponent(params.title);
     let recipe: any = null;
-    let loading = null;
+    let loading = false;
     let errorMessage ='';
 
     /*onMount(async () => {
@@ -89,7 +89,7 @@
 
   function goBack() {
     selectedRecipe.set(null)
-    window.location.hash = "#/planner";
+    window.location.hash = "#/planner/browse";
   }
 
 </script>

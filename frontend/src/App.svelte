@@ -3,6 +3,7 @@
   import Router from 'svelte-spa-router';
   import routes from './routes/routes';
   import './app.scss'
+  import Homepage from './routes/Homepage.svelte'; // import homepage directly
 
     let isLoggedIn = false;
     let userInfo = {};
@@ -58,39 +59,51 @@
 
 </script>
 
-  <div class="container">
-    <header>
-      <a href="#/" class="logo">
-        <img src="./logo.png" alt="Food Tracker logo" id="logo">
-      </a>
-      <nav>
-        <a href="#/calculator">Calculator</a>
-        <a href="#/goal">Goal</a>
-        <a href="#/planner">Meal Planner</a>
-        <a href="#/report">Report</a>
-        <a href="#/recipe">Recipe</a>
-        <div>
-          {#if !loading}
-            {#if isLoggedIn}
-              <div class="logged-in">
-                <a href="#/user-portal">
-                  <img src="./profile.png" alt="profile icon" id="profile-icon">
-                </a>
-                <button class="logout-btn" on:click={userLogout} type="button" aria-label="User Account">
-                  Logout
-                </button>
-              </div>
-            {:else}
-              <button class="login-btn" on:click={redirectToDexLogin}>Login</button>
-            {/if}
-          {/if}
-        </div>
-      </nav>
-    </header>
-</div>
-
-<Router {routes} />
-
+{#if !loading}
+  {#if isLoggedIn}
+    <div class="container">
+      <header>
+        <a href="#/" class="logo">
+          <img src="./logo.png" alt="Food Tracker logo" id="logo">
+        </a>
+        <nav>
+          <a href="#/calculator">Calculator</a>
+          <a href="#/goal">Goal</a>
+          <a href="#/planner">Meal Planner</a>
+          <a href="#/report">Report</a>
+          <a href="#/recipe">Recipe</a>
+          <div>
+            <div class="logged-in">
+              <a href="#/user-portal">
+                <img src="./profile.png" alt="profile icon" id="profile-icon">
+              </a>
+              <button class="logout-btn" on:click={userLogout} type="button" aria-label="User Account">
+                Logout
+              </button>
+            </div>
+          </div>
+        </nav>
+      </header>
+    </div>
+    <Router {routes} />
+  {:else}
+    <div class="container">
+      <header>
+        <a href="#/" class="logo">
+          <img src="./logo.png" alt="Food Tracker logo" id="logo">
+        </a>
+        <nav>
+          <button class="login-btn" on:click={redirectToDexLogin}>Login</button>
+        </nav>
+      </header>
+    </div>
+    <Homepage />
+  {/if}
+{:else}
+  <div class="loading-container">
+    <p>Loading...</p>
+  </div>
+{/if}
 
 <main>
 
