@@ -3,9 +3,6 @@
     import {onMount} from 'svelte';
     import {selectedRecipe,selectedServings} from '../stores/recipe';
     import {get} from 'svelte/store';
-  import { measureMemory } from 'vm';
-    
-
 
     let recipeTitle = decodeURIComponent(params.title);
     let recipe: any = null;
