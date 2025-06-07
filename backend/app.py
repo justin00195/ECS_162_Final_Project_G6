@@ -11,6 +11,7 @@ reDirect = 'http://localhost:8000/auth/callback'
 frontend_url = os.getenv("FRONTEND_URL")
 cal_api_key = os.getenv("CAL_NJ_API_KEY")
 spoonacular_API_KEY = os.getenv("SPOONACULAR_API_KEY")
+usda_api_key = os.getenv("USDA_API_KEY")
 
 DEX_TOKEN_URL = 'http://dex:5556/token'
 DEX_USERINFO_URL = 'http://dex:5556/userinfo'
@@ -301,6 +302,12 @@ def get_recipes():
 
 @app.route('/api/recipe', methods=['GET'])
 def get_recipe():
+    query = request.args.get('query')
+    min_calories = request.args.get('minCalories')
+    max_calories = request.args.get('maxCalories')
+    diets = request.args.getlist('diet')
+    meal_types = request.args.getlist('mealType')
+
     query = request.args.get('query', '')
     if not query:
         return jsonify({"error": "Missing food query"}), 400
@@ -308,13 +315,24 @@ def get_recipe():
     api_url = 'https://api.spoonacular.com/recipes/complexSearch'
 
     params = {
-        'query': query,
         'apiKey': spoonacular_API_KEY,
-        'number': 10,
+        'number': 20,
         'addRecipeInformation': True,
         'fillIngredients': True,
         'addRecipeInstructions': True,
     }
+
+    if query:
+        params['query'] = query
+    if min_calories:
+        params['minCalories'] = min_calories
+    if max_calories:
+        params['maxCalories'] = max_calories
+    if diets:
+        params['diet'] = ','.join(diets)
+    if meal_types:
+        params['type'] = ','.join(meal_types)
+
 
     def estimate_calories(ingredient_names):
         try:
@@ -336,9 +354,11 @@ def get_recipe():
     try:
         res = requests.get(api_url, params=params)
 
+
         if res.status_code == 200:
             data = res.json()
             recipes = data.get('results', [])
+
 
             items = []
             for recipe in recipes:
@@ -361,6 +381,17 @@ def get_recipe():
                 # Estimate calories from ingredient names
                 calories = estimate_calories(ingredient_names)
 
+                ingredients = [
+                    f"{ing.get('amount', '')} {ing.get('unit', '')} {ing.get('name', '')}".strip()
+                    for ing in recipe.get('extendedIngredients', [])
+                ]
+
+                instructions = [
+                    step.get('step', '')
+                    for instruction_group in recipe.get('analyzedInstructions', [])
+                    for step in instruction_group.get('steps', [])
+                ]
+
                 item = {
                     'title': recipe.get('title', ''),
                     'ingredients': '|'.join(ingredients),
@@ -371,6 +402,7 @@ def get_recipe():
                 }
                 items.append(item)
 
+
             return jsonify({"items": items})
         else:
             return jsonify({
@@ -378,6 +410,7 @@ def get_recipe():
                 "status": res.status_code,
                 "message": res.text
             }), res.status_code
+
 
     except Exception as e:
         print(f"Error: {e}")
@@ -464,6 +497,46 @@ def remove_favorite():
         return jsonify({'success': True})
 
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/food/search', methods=['GET'])
+def search_food():
+    query = request.args.get('query', '')
+    page_size = request.args.get('pageSize', 5)
+
+    if not query:
+        return jsonify({'error': 'Missing query parameter'}), 400
+
+    try:
+        response = requests.get(
+            'https://api.nal.usda.gov/fdc/v1/foods/search',
+            params={
+                'api_key': usda_api_key,
+                'query': query,
+                'dataType': ['Foundation', 'SR Legacy'],
+                'pageSize': page_size
+            }
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        transformed_foods = [{
+            'name': food.get('description', ''),
+            'id': food.get('fdcId'),
+            'brandOwner': food.get('brandOwner'),
+            'category': (
+                food.get('foodCategory', {}).get('description')
+                if isinstance(food.get('foodCategory'), dict)
+                else None
+            )
+        } for food in data.get('foods', [])]
+
+        return jsonify({
+            'foods': transformed_foods,
+            'totalHits': data.get('totalHits', 0)
+        })
+
+    except requests.exceptions.RequestException as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
