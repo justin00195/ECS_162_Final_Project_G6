@@ -71,7 +71,6 @@
           <a href="#/goal">Goal</a>
           <a href="#/planner">Meal Planner</a>
           <a href="#/report">Report</a>
-          <a href="#/recipe">Recipe</a>
           <div>
             <div class="logged-in">
               <a href="#/user-portal">

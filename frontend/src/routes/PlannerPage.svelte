@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from "svelte";
 
     let mealsContainer: HTMLElement;
     let meals: { id: number, name: string, ingredients: string[] }[] = [];
@@ -29,6 +30,27 @@
             console.error('Error loading meals:', error);
         }
     }
+
+    async function getCaloriesFromNinja(query: string): Promise<number | null> {
+    try {
+      const res = await fetch('http://localhost:8000/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ query })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.items && data.items.length > 0) {
+        return data.items.reduce((sum: number, item: any) => sum + (item.calories || 0), 0);
+      } else {
+        return null;
+      }
+    } catch (err) {
+      console.error('Error to get receipt calories:', err);
+      return null;
+    }
+  }
 
     async function searchIngredients(mealId: number, query: string) {
         if (!query.trim()) {
@@ -237,7 +259,6 @@
 
     onMount(async () => {
         await loadMeals();
-        await fetchFavorites();
     });
 </script>
 
