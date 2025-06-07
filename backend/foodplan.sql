@@ -28,3 +28,12 @@ CREATE TABLE IF NOT EXISTS favorite_recipes (
   PRIMARY KEY (email, recipe_title),
   FOREIGN KEY (email) REFERENCES users(email)
 );
+
+DROP TABLE IF EXISTS announcements;
+
+CREATE TABLE IF NOT EXISTS announcements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  content TEXT NOT NULL,
+  created_by TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
