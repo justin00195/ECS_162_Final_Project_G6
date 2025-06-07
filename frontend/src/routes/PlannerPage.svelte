@@ -1,7 +1,4 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import '../assets/planner.scss'
-    import { fetchFavorites } from '../stores/favorites';
 
     let mealsContainer: HTMLElement;
     let meals: { id: number, name: string, ingredients: string[] }[] = [];
@@ -141,10 +138,6 @@
             event.currentTarget.blur();
         }
     }
-
-    onMount(async () => {
-      await fetchFavorites();
-    });
 </script>
 
 <div class="planner-container">

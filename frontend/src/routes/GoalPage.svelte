@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { calAdjust } from '../stores/calAdjust';
+  import '../assets/goal.scss';
 
   let currentWeight = 0;
   let startingWeight = 0;
@@ -13,6 +14,8 @@
   let error = '';
   let hasExistingGoal = false;
   let showDeleteConfirmation = false;
+  let showDurationTooltip = false;
+  let showCalorieTooltip = false;
 
   // Saved values for progress calculations
   let savedStartingWeight = 0;
@@ -37,6 +40,12 @@
 
   onMount(async () => {
     try {
+      // Load saved message and calorie adjustment from localStorage
+      const savedMessage = localStorage.getItem('goalMessage');
+      const savedCalorieAdjust = localStorage.getItem('calorieAdjust');
+      if (savedMessage) message = savedMessage;
+      if (savedCalorieAdjust) calorieAdjust = parseInt(savedCalorieAdjust);
+
       const profileRes = await fetch('http://localhost:8000/user/profile', {
         method: 'GET',
         credentials: 'include'
@@ -46,6 +55,8 @@
         throw new Error(profileData.error || 'error fetching profile');
       }
       currentWeight = profileData.weight;
+      startingWeight = currentWeight;
+      latestWeight = startingWeight;
 
       const goalRes = await fetch('http://localhost:8000/goal', {
         method: 'GET',
@@ -74,6 +85,10 @@
   });
 
   const setGoal = async () => {
+    if (!startingWeight || !targetWeight || !duration) {
+      error = 'Please fill in all fields before submitting.';
+      return;
+    }
     error = '';
     try {
       const res = await fetch('http://localhost:8000/goal', {
@@ -93,10 +108,15 @@
       if (!res.ok) {
         throw new Error(data.error || 'error setting goal');
       }
+      const wasFirstGoal = !hasExistingGoal;
       hasExistingGoal = true;
       calorieAdjust = data.calories_sug;
-      calAdjust.set(data.calories_sug)
+      calAdjust.set(data.calories_sug);
       message = data.message;
+
+      // Save message and calorie adjustment to localStorage
+      localStorage.setItem('goalMessage', message);
+      localStorage.setItem('calorieAdjust', calorieAdjust.toString());
 
       // Update saved values after successful submission
       savedStartingWeight = startingWeight;
@@ -104,6 +124,22 @@
       savedTargetWeight = targetWeight;
       savedDuration = duration;
       savedStartDate = goalStartDate;
+
+      // Fetch the current user profile
+      const userProfileRes = await fetch('http://localhost:8000/user/profile', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      const userProfile = await userProfileRes.json();
+      // Update the weight field
+      userProfile.weight = wasFirstGoal ? startingWeight : latestWeight;
+      // POST the full user profile back
+      await fetch('http://localhost:8000/user/profile', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userProfile)
+      });
     } catch (err: any) {
       error = err.message || 'network error';
     }
@@ -132,10 +168,15 @@
       targetWeight = 0;
       duration = 0;
       goalStartDate = new Date().toISOString().slice(0, 10);
-      startingWeight = 0;
-      latestWeight = 0;
+      startingWeight = currentWeight;
+      latestWeight = currentWeight;
       calorieAdjust = 0;  // Reset calorie adjustment
+      calAdjust.set(0);   // Reset the Svelte store as well
       message = '';       // Clear the message
+
+      // Clear localStorage
+      localStorage.removeItem('goalMessage');
+      localStorage.removeItem('calorieAdjust');
 
       // Reset saved values
       savedStartingWeight = 0;
@@ -173,135 +214,144 @@
         (savedDuration * 24 * 60 * 60 * 1000)
       )
     : 0;
+
+  // Keep latestWeight in sync with startingWeight before first goal is submitted
+  $: if (!hasExistingGoal) {
+    latestWeight = startingWeight;
+  }
 </script>
 
-<h2>Set Your Weight Goal</h2>
+<h1>Set Your Weight Goal</h1>
 {#if error}
-  <p style="color: red;">{error}</p>
+  <p class="error-message">{error}</p>
 {/if}
 
 <!-- FLEXBOX LAYOUT -->
 <div class="flex-container">
   <!-- LEFT COLUMN -->
-  <div class="left-column">
-    <!-- Current Weight field commented out
-    <label>
-      Current Weight (kg):
-      <input type="number" bind:value={currentWeight} disabled />
-    </label>
-    -->
-    <label>
-      Starting Weight (kg):
-      <input
-        type="number"
-        bind:value={startingWeight}
-        disabled={hasExistingGoal}
-      />
-    </label>
+  <div class="card left-column">
+    {#if !hasExistingGoal}
+      <label>
+        Starting Weight (kg):
+        <input type="number" bind:value={startingWeight} />
+      </label>
+    {:else}
+      <div class="saved-value">
+        <span class="label">Starting Weight:</span>
+        <span class="value">{startingWeight} kg</span>
+      </div>
+    {/if}
 
-    <label>
-      Latest Weight (kg):
-      <input type="number" bind:value={latestWeight} />
-    </label>
+    {#if hasExistingGoal}
+      <label>
+        Latest Weight (kg):
+        <input type="number" bind:value={latestWeight} />
+      </label>
+    {/if}
 
     <label>
       Target Weight (kg):
       <input type="number" bind:value={targetWeight} />
     </label>
 
-    <label>
-      Duration (days):
-      <input type="number" bind:value={duration} />
-    </label>
+    <div class="input-with-tooltip">
+      <label>
+        Duration (days):
+        <input type="number" bind:value={duration} />
+      </label>
+      <button 
+        class="info-button" 
+        on:click={() => showDurationTooltip = !showDurationTooltip}
+        on:blur={() => showDurationTooltip = false}
+      >
+        ℹ️
+      </button>
+      {#if showDurationTooltip}
+        <div class="tooltip">
+          How many days until you reach your target weight?
+        </div>
+      {/if}
+    </div>
 
-    <label>
-      Goal Start Date:
-      <input type="date" bind:value={goalStartDate} />
-    </label>
+    {#if !hasExistingGoal}
+      <label>
+        Goal Start Date:
+        <input type="date" bind:value={goalStartDate} />
+      </label>
+    {:else}
+      <div class="saved-value">
+        <span class="label">Start Date:</span>
+        <span class="value">📅 {goalStartDate}</span>
+      </div>
+    {/if}
 
-    <button on:click={setGoal}>
-      {hasExistingGoal ? 'Update Progress' : 'Submit Goal'}
-    </button>
-    <button on:click={confirmDelete} style="margin-left: 10px;">
-      Delete Goal
-    </button>
+    <div class="button-group">
+      <button class="primary-button" on:click={setGoal}>
+        {hasExistingGoal ? 'Update' : 'Submit'}
+      </button>
+      {#if hasExistingGoal}
+        <button class="delete-button" on:click={confirmDelete}>
+          Delete
+        </button>
+      {/if}
+    </div>
 
     {#if showDeleteConfirmation}
       <div class="confirmation-popup">
         <p>Are you sure you want to delete your goal?</p>
-        <button on:click={deleteGoal}>Yes, Delete</button>
-        <button on:click={cancelDelete}>Cancel</button>
+        <div class="confirmation-buttons">
+          <button class="delete-button" on:click={deleteGoal}>Yes</button>
+          <button class="cancel-button" on:click={cancelDelete}>Cancel</button>
+        </div>
       </div>
     {/if}
   </div>
 
   <!-- RIGHT COLUMN -->
-  <div class="right-column">
+  <div class="card right-column">
     {#if message}
-      <p><strong>{message}</strong></p>
-      <p>
-        Recommended daily calorie
-        {goalType === 'lose'
-          ? 'deficit'
-          : goalType === 'gain'
-          ? 'surplus'
-          : 'adjustment'}
-        : <strong>{calorieAdjust}</strong> kcal
-      </p>
+      <div class="notification">
+        <span class="checkmark">✅</span>
+        <span class="message">{message}</span>
+        <div class="calorie-info">
+          <span>Recommended daily calorie {goalType === 'lose' ? 'deficit' : goalType === 'gain' ? 'surplus' : 'adjustment'}:</span>
+          <div class="input-with-tooltip">
+            <strong>{calorieAdjust} kcal</strong>
+            <button 
+              class="info-button" 
+              on:click={() => showCalorieTooltip = !showCalorieTooltip}
+              on:blur={() => showCalorieTooltip = false}
+            >
+              ℹ️
+            </button>
+            {#if showCalorieTooltip}
+              <div class="tooltip">
+                This is calculated based on your weight difference and duration. 
+                For every 7700 calories, you gain or lose 1 kg of weight. Your calorie adjustment will be applied to your daily calorie budget.
+              </div>
+            {/if}
+          </div>
+        </div>
+      </div>
     {/if}
 
     {#if hasExistingGoal}
-      <h3>Goal Type</h3>
-      <p>{goalLabel}</p>
+      <div class="goal-type">
+        <h3>Goal Type</h3>
+        <p>{goalLabel}</p>
+      </div>
     {/if}
 
-    <h3>Weight Progress</h3>
-    <progress max="1" value={weightProgress}></progress>
-    <p>{Math.round(weightProgress * 100)}% toward your weight goal</p>
+    <div class="progress-section">
+      <h3>Weight Progress</h3>
+      <progress max="1" value={weightProgress}></progress>
+      <p>{Math.round(weightProgress * 100)}% toward your weight goal</p>
+    </div>
 
-    <h3>Time Progress</h3>
-    <progress max="1" value={timeProgress}></progress>
-    <p>{Math.round(timeProgress * 100)}% of {savedDuration} days elapsed</p>
+    <div class="progress-section">
+      <h3>Time Progress</h3>
+      <progress max="1" value={timeProgress}></progress>
+      <p>{Math.round(timeProgress * 100)}% of {savedDuration} days elapsed</p>
+    </div>
   </div>
 </div>
-
-<style>
-  /* Flex container for two columns */
-  .flex-container {
-    display: flex;
-    column-gap: 2rem;   /* horizontal space between columns */
-    align-items: flex-start;
-  }
-
-  /* Each column should take up roughly 50% */
-  .left-column,
-  .right-column {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;       /* vertical spacing between items */
-  }
-
-  /* On narrow screens, stack vertically */
-  @media (max-width: 600px) {
-    .flex-container {
-      flex-direction: column;
-    }
-  }
-
-  .confirmation-popup {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 20px;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-  }
-
-  .confirmation-popup button {
-    margin: 10px;
-  }
-</style>

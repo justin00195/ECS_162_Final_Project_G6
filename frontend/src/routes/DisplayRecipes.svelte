@@ -22,19 +22,25 @@
 	<h2>{category}</h2>
 	<button on:click={showFilters}>Filter</button>
 	<ul class="results-list">
-		{#each results as result}
-			<li class="result">
-				<button on:click={() => tempRecipeInfo(result)}>
-					{result.title}
-				</button>
-				<button on:click={() => {toggleFavorite(result.title)}} class="heart-btn">
-					<img
-						src={$favoriteMap[result.title] ? './solid-heart.png' : './empty-heart.png'}
-						alt="heart icon"
-						class="heart-icon"
-					/>
-				</button>
-			</li>
-		{/each}
+	  {#each results as result}
+		<li class="result">
+		  <div>
+			<button on:click={() => tempRecipeInfo(result)}>
+			  {result.title}
+			</button>
+			{#if result.calories !== undefined}
+			  <p><strong>Calories:</strong> {result.calories} kcal</p>
+			{/if}
+		  </div>
+		  <button on:click={() => toggleFavorite(result.title)} class="heart-btn">
+			<img
+			  src={$favoriteMap[result.title] ? './solid-heart.png' : './empty-heart.png'}
+			  alt="heart icon"
+			  class="heart-icon"
+			/>
+		  </button>
+		</li>
+	  {/each}
 	</ul>
-</div>
+  </div>
+  
