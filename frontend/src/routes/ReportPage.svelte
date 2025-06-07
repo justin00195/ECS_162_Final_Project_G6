@@ -130,6 +130,16 @@
     progress.target = Math.min(calorieBudget, Math.max(0,totalCals))
   }
 
+  function addFavCals(cals: number | string){
+    const calsNum = typeof cals == 'number' ? cals : parseFloat(cals)
+
+    if (!isNaN(calsNum)){
+      dinner += calsNum
+      updateProgress()
+    }else{
+      console.warn("Invalid value added to calories")
+    }
+  }
 
   
 </script>
@@ -249,6 +259,7 @@
           {#each displayFavs as fav}
             <li>
               {fav.title}: {fav.recipieCaloires} kcals
+              <button class = "add-button" on:click={()=>addFavCals(fav.recipieCaloires)}>Add</button>
             </li>
           {/each}
         </ul>
