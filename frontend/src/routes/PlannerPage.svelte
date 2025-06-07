@@ -178,6 +178,7 @@
                             on:keydown={(e) => handleRenameKeydown(meal.id, e)}
                         />
                     </div>
+                    <!-- svelte-ignore a11y_consider_explicit_label -->
                     <button class="delete-btn" on:click={() => deleteMeal(meal.id)}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 6h18"></path>
@@ -207,6 +208,7 @@
                                     <div class="loading">Searching...</div>
                                 {:else}
                                     {#each searchResults[meal.id] as result}
+                                        <!-- svelte-ignore a11y_no_static_element_interactions -->
                                         <div 
                                             class="result-item"
                                             on:mousedown={() => handleIngredientClick(meal.id, result.name)}

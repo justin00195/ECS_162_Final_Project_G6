@@ -1,8 +1,10 @@
 <script lang="ts">
     export let params;
     import {onMount} from 'svelte';
-    import {selectedRecipe} from '../stores/recipe';
+    import {selectedRecipe,selectedServings} from '../stores/recipe';
     import {get} from 'svelte/store';
+  import { measureMemory } from 'vm';
+    
 
 
     let recipeTitle = decodeURIComponent(params.title);
@@ -24,16 +26,16 @@
 
       recipe = {
           title: meal.title,
-
           ingredients: formatIngredients(meal),
           instructions: formatInstructions(meal),
           servings: meal.servings,
           image: meal.image
         };
         loading = false;
-
+        selectedServings.set(meal.servings)
     });
 
+    
   function formatIngredients(meal: any): string[] {
     return meal.ingredients.split("|");
   }

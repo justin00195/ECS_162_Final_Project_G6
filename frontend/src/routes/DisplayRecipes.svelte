@@ -15,7 +15,7 @@
   function showFilters(){
     window.location.hash = `#/filter`
   }
-
+  
 </script>
 
 <div class="container">
@@ -29,10 +29,11 @@
 			  {result.title}
 			</button>
 			{#if result.calories !== undefined}
+			
 			  <p><strong>Calories:</strong> {result.calories} kcal</p>
 			{/if}
 		  </div>
-		  <button on:click={() => toggleFavorite(result.title)} class="heart-btn">
+		  <button on:click={() => toggleFavorite(result.title, result.calories)} class="heart-btn">
 			<img
 			  src={$favoriteMap[result.title] ? './solid-heart.png' : './empty-heart.png'}
 			  alt="heart icon"

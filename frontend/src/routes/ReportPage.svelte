@@ -1,12 +1,13 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import {Tween} from 'svelte/motion'
   import {get} from 'svelte/store';
   import { cubicOut } from 'svelte/easing';
   import { allTDEE } from '../stores/tdee';
   import { calAdjust } from '../stores/calAdjust';
+  import { favoriteMap, favoriteCals } from '../stores/favorites';
   import '../assets/report.scss';
-  //import { storedLogin} from '../stores/isLogged';
+  import {selectedServings} from '../stores/recipe';
+ 
   
   
 
@@ -17,22 +18,8 @@
   //3 main marcos are protien, fats, carbs
   const tdee = get(allTDEE) ?? 1000
 
-  /*
-  if (tdee === null){
-    throw new Error("Please LOGIN for TDEE value")
-  }
-  */
-  
-
   const calAdj = get(calAdjust) ?? 1000
-  /**
-   if (calAdj === null){
-    throw new Error("Please LOGIN for Goal value")
-  }
-  */
   
-
- 
   let calorieBudget = tdee + (calAdj);
   let breakFast = 0;
   let lunch = 0;
@@ -49,7 +36,15 @@
   let totalCarbs = 0;
   let totalFats = 0;
   
+  $:favMap = $favoriteMap;
+  $:favCals = $favoriteCals;
 
+  $: displayFavs = Object.entries(favMap)
+    .filter(([recipe, isFav]) => isFav)
+    .map(([recipe])=>({
+      title:recipe,
+      recipieCaloires: favCals[recipe] ?? 'N/A'
+    }))
 
   type mealType = 'breakfast' | 'lunch' |'dinner'|'snacks';
   type foodItem = {
@@ -245,6 +240,23 @@
         </div>
       {/each}
     </div>
+
+
+    <div>
+      <h2>Favoirte Recipies</h2>
+      {#if displayFavs.length > 0}
+        <ul>
+          {#each displayFavs as fav}
+            <li>
+              {fav.title}: {fav.recipieCaloires} kcals
+            </li>
+          {/each}
+        </ul>
+        {:else}
+          <p>No Favoirte Recipies Saved!!</p>
+      {/if}
+
+    </div>
   </div>
 
 
@@ -256,10 +268,3 @@
 
 
 
-<!---Subject to change-->
-<style>
-
-  
- 
-
-</style>

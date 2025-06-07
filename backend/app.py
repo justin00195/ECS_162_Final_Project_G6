@@ -442,7 +442,12 @@ def add_favorite():
     cursor.execute(
         "SELECT 1 FROM favorite_recipes WHERE email = ? AND recipe_title = ?", 
         (email, recipe)
+   
     )
+    if cursor.fetchone():
+        cnx.close()
+        return jsonify({"message":"Recipe is added"}),200
+    
     cursor.execute("""
         INSERT INTO favorite_recipes (email, recipe_title) VALUES (?, ?)""", 
     (email, recipe))
