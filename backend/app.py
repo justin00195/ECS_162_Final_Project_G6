@@ -4,6 +4,7 @@ import os
 import secrets
 import requests
 from db import get_db_connection, init_db
+from functools import wraps
 
 clientSecret = os.getenv("OIDC_CLIENT_SECRET")
 clientID = os.getenv("OIDC_CLIENT_ID")
@@ -75,6 +76,13 @@ def auth_callback():
             return f"Failed to get user info: {userinfo_resp.text}", 500
         #store it in flask
         userinfo = userinfo_resp.json()
+        email = userinfo.get('email', '')
+        if email == 'moderator@hw3.com':
+            userinfo['role'] = 'moderator'
+        elif email == 'admin@hw3.com':
+            userinfo['role'] = 'admin'
+        else:
+            userinfo['role'] = 'user'
         session['user'] = userinfo
         return redirect(f"{frontend_url}#/user-portal")
     except Exception as e:
@@ -538,6 +546,76 @@ def search_food():
 
     except requests.exceptions.RequestException as e:
         return jsonify({'error': str(e)}), 500
+
+# Announcement Role Decorator
+def moderator_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = session.get('user')
+        if not user or user.get('role') != 'moderator':
+            return jsonify({'error': 'Moderator access required'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Announcements API
+@app.route('/announcements', methods=['GET'])
+def get_announcements():
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute("SELECT id, content, created_by, created_at FROM announcements ORDER BY created_at DESC")
+    rows = cursor.fetchall()
+    cnx.close()
+    announcements = [
+        {
+            'id': row['id'],
+            'content': row['content'],
+            'created_by': row['created_by'],
+            'created_at': row['created_at']
+        }
+        for row in rows
+    ]
+    return jsonify(announcements)
+
+@app.route('/announcements', methods=['POST'])
+@moderator_required
+def post_announcement():
+    user = session.get('user')
+    data = request.get_json()
+    content = data.get('content')
+    if not content:
+        return jsonify({'error': 'Content required'}), 400
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute(
+        "INSERT INTO announcements (content, created_by) VALUES (?, ?)",
+        (content, user.get('email', 'moderator'))
+    )
+    cnx.commit()
+    ann_id = cursor.lastrowid
+    cursor.execute("SELECT id, content, created_by, created_at FROM announcements WHERE id = ?", (ann_id,))
+    row = cursor.fetchone()
+    cnx.close()
+    return jsonify({
+        'id': row['id'],
+        'content': row['content'],
+        'created_by': row['created_by'],
+        'created_at': row['created_at']
+    })
+
+@app.route('/announcements/<int:ann_id>', methods=['DELETE'])
+@moderator_required
+def delete_announcement(ann_id):
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute("DELETE FROM announcements WHERE id = ?", (ann_id,))
+    cnx.commit()
+    cnx.close()
+    return jsonify({'success': True})
+
+@app.route('/logout', methods=['GET'])
+def logout():
+    session.clear()
+    return jsonify({"message": "Logged out"})
 
 if __name__ == '__main__':
     init_db()
