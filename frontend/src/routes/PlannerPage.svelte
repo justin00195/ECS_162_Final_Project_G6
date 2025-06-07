@@ -11,6 +11,28 @@
     let isLoading: { [key: number]: boolean } = {};
     let showDropdown: { [key: number]: boolean } = {};
 
+    async function loadMeals() {
+        try {
+            const response = await fetch('http://localhost:8000/api/meal', {
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to load meals');
+            }
+            
+            const data = await response.json();
+            // Sort meals by ID to ensure ascending order
+            meals = data.meals.sort((a: { id: number }, b: { id: number }) => a.id - b.id);
+            
+            // Update nextMealId to be greater than any existing meal ID
+            const maxId = meals.length > 0 ? Math.max(...meals.map(m => m.id)) : 0;
+            nextMealId = maxId + 1;
+        } catch (error) {
+            console.error('Error loading meals:', error);
+        }
+    }
+
     async function searchIngredients(mealId: number, query: string) {
         if (!query.trim()) {
             searchResults[mealId] = [];
@@ -43,29 +65,89 @@
         }
     }
 
-    function addMeal() {
-        const newId = nextMealId++;
-        meals = [...meals, { id: newId, name: `Meal ${newId + 1}`, ingredients: [] }];
-        searchResults[newId] = [];
-        searchQuery[newId] = '';
-        isLoading[newId] = false;
-        showDropdown[newId] = false;
+    async function addMeal() {
+        const newMealName = `Meal ${meals.length + 1}`;
         
-        // Wait for DOM update before scrolling
-        setTimeout(() => {
-            mealsContainer?.scrollTo({
-                top: mealsContainer.scrollHeight,
-                behavior: 'smooth'
+        try {
+            const response = await fetch('http://localhost:8000/api/meal', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    name: newMealName
+                })
             });
-        }, 0);
+
+            if (!response.ok) {
+                throw new Error('Failed to add meal to database');
+            }
+
+            const data = await response.json();
+            // Only update UI if database operation was successful
+            const newMeal = { 
+                id: data.meal_id, 
+                name: newMealName, 
+                ingredients: [] 
+            };
+            meals = [...meals, newMeal];  // Add to end of array
+            searchResults[data.meal_id] = [];
+            searchQuery[data.meal_id] = '';
+            isLoading[data.meal_id] = false;
+            showDropdown[data.meal_id] = false;
+            
+            // Wait for DOM update before scrolling
+            setTimeout(() => {
+                mealsContainer?.scrollTo({
+                    top: mealsContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 0);
+        } catch (error) {
+            console.error('Error adding meal:', error);
+        }
     }
 
-    function deleteMeal(mealId: number) {
-        meals = meals.filter(meal => meal.id !== mealId);
-        delete searchResults[mealId];
-        delete searchQuery[mealId];
-        delete isLoading[mealId];
-        delete showDropdown[mealId];
+    async function deleteMeal(mealId: number) {
+        try {
+            const response = await fetch(`http://localhost:8000/api/meal/${mealId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete meal');
+            }
+
+            // Only update UI if delete was successful
+            meals = meals.filter(meal => meal.id !== mealId);
+            delete searchResults[mealId];
+            delete searchQuery[mealId];
+            delete isLoading[mealId];
+            delete showDropdown[mealId];
+        } catch (error) {
+            console.error('Error deleting meal:', error);
+        }
+    }
+
+    async function updateMeal(mealId: number, updateData: { name?: string, ingredients?: string[] }) {
+        try {
+            const response = await fetch(`http://localhost:8000/api/meal/${mealId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify(updateData)
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update meal');
+            }
+        } catch (error) {
+            console.error('Error updating meal:', error);
+        }
     }
 
     function renameMeal(mealId: number, newName: string) {
@@ -75,21 +157,26 @@
             }
             return meal;
         });
+        updateMeal(mealId, { name: newName });
     }
 
     function addIngredient(mealId: number, ingredientName: string) {
         if (!ingredientName.trim()) return;
         
-        meals = meals.map(meal => {
+        const updatedMeals = meals.map(meal => {
             if (meal.id === mealId) {
-                return {
+                const updatedMeal = {
                     ...meal,
                     ingredients: [...meal.ingredients, ingredientName.trim()]
                 };
+                // Update in database
+                updateMeal(mealId, { ingredients: updatedMeal.ingredients });
+                return updatedMeal;
             }
             return meal;
         });
-
+        
+        meals = updatedMeals;
         // Clear search after adding
         searchQuery[mealId] = '';
         searchResults[mealId] = [];
@@ -101,6 +188,8 @@
             if (meal.id === mealId) {
                 const newIngredients = [...meal.ingredients];
                 newIngredients.splice(index, 1);
+                // Update in database
+                updateMeal(mealId, { ingredients: newIngredients });
                 return {
                     ...meal,
                     ingredients: newIngredients
@@ -142,8 +231,16 @@
         }
     }
 
+    function handleRenameBlur(mealId: number, event: FocusEvent & { currentTarget: HTMLInputElement }) {
+        const input = event.currentTarget;
+        if (input.value.trim()) {
+            renameMeal(mealId, input.value.trim());
+        }
+    }
+
     onMount(async () => {
-      await fetchFavorites();
+        await loadMeals();
+        await fetchFavorites();
     });
 </script>
 
@@ -160,6 +257,7 @@
                             class="meal-title"
                             value={meal.name}
                             on:keydown={(e) => handleRenameKeydown(meal.id, e)}
+                            on:blur={(e) => handleRenameBlur(meal.id, e)}
                         />
                     </div>
                     <button class="delete-btn" on:click={() => deleteMeal(meal.id)}>

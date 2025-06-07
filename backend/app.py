@@ -4,6 +4,7 @@ import os
 import secrets
 import requests
 from db import get_db_connection, init_db
+import sqlite3
 
 clientSecret = os.getenv("OIDC_CLIENT_SECRET")
 clientID = os.getenv("OIDC_CLIENT_ID")
@@ -444,6 +445,7 @@ def remove_favorite():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# search for food in USDA database
 @app.route('/api/food/search', methods=['GET'])
 def search_food():
     query = request.args.get('query', '')
@@ -483,6 +485,171 @@ def search_food():
 
     except requests.exceptions.RequestException as e:
         return jsonify({'error': str(e)}), 500
+
+# post a meal
+@app.route('/api/meal', methods=['POST'])
+def add_meal():
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "Not authenticated"}), 401
+        
+    email = user['email']
+    data = request.get_json()
+    
+    # Validate required fields
+    required_fields = ['name']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"error": f"Missing required field: {field}"}), 400
+    
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    
+    try:
+        cursor.execute("""
+            INSERT INTO meals (
+                name, date_created, ingredients, user_email
+            ) VALUES (?, datetime('now'), ?, ?)
+        """, (
+            data['name'],
+            '',  # Empty string for initial ingredients
+            email
+        ))
+        
+        # Get the ID of the newly inserted meal
+        meal_id = cursor.lastrowid
+        
+        cnx.commit()
+        return jsonify({
+            'message': 'Meal added successfully!',
+            'meal_name': data['name'],
+            'meal_id': meal_id
+        })
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cnx.close()
+
+# get user's meals
+@app.route('/api/meal', methods=['GET'])
+def get_meals():
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "Not authenticated"}), 401
+        
+    email = user['email']
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT id, name, date_created, ingredients
+            FROM meals 
+            WHERE user_email = ?
+            ORDER BY date_created DESC
+        """, (email,))
+        
+        meals = []
+        for row in cursor.fetchall():
+            meals.append({
+                'id': row['id'],
+                'name': row['name'],
+                'date_created': row['date_created'],
+                'ingredients': row['ingredients'].split('|') if row['ingredients'] else []
+            })
+            
+        return jsonify({'meals': meals})
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cnx.close()
+
+# delete a meal
+@app.route('/api/meal/<int:meal_id>', methods=['DELETE'])
+def delete_meal(meal_id):
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "Not authenticated"}), 401
+        
+    email = user['email']
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    
+    try:
+        # First verify the meal belongs to the user
+        cursor.execute("""
+            SELECT 1 FROM meals 
+            WHERE id = ? AND user_email = ?
+        """, (meal_id, email))
+        
+        if not cursor.fetchone():
+            return jsonify({'error': 'Meal not found or unauthorized'}), 404
+            
+        # Delete the meal
+        cursor.execute("""
+            DELETE FROM meals 
+            WHERE id = ? AND user_email = ?
+        """, (meal_id, email))
+        
+        cnx.commit()
+        return jsonify({'message': 'Meal deleted successfully'})
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cnx.close()
+
+# update a meal
+@app.route('/api/meal/<int:meal_id>', methods=['PUT'])
+def update_meal(meal_id):
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "Not authenticated"}), 401
+        
+    email = user['email']
+    data = request.get_json()
+    
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    
+    try:
+        # First verify the meal belongs to the user
+        cursor.execute("""
+            SELECT 1 FROM meals 
+            WHERE id = ? AND user_email = ?
+        """, (meal_id, email))
+        
+        if not cursor.fetchone():
+            return jsonify({'error': 'Meal not found or unauthorized'}), 404
+        
+        # Build update query based on provided fields
+        update_fields = []
+        params = []
+        if 'name' in data:
+            update_fields.append('name = ?')
+            params.append(data['name'])
+        if 'ingredients' in data:
+            update_fields.append('ingredients = ?')
+            params.append('|'.join(data['ingredients']) if isinstance(data['ingredients'], list) else data['ingredients'])
+            
+        if not update_fields:
+            return jsonify({'error': 'No fields to update'}), 400
+            
+        # Add meal_id and email to params
+        params.extend([meal_id, email])
+        
+        # Update the meal
+        cursor.execute(f"""
+            UPDATE meals 
+            SET {', '.join(update_fields)}
+            WHERE id = ? AND user_email = ?
+        """, params)
+        
+        cnx.commit()
+        return jsonify({'message': 'Meal updated successfully'})
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cnx.close()
 
 if __name__ == '__main__':
     init_db()
