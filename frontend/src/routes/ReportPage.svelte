@@ -62,10 +62,10 @@
         totalProtein = data.totalProtein;
         totalCarbs = data.totalCarbs;
         totalFats = data.totalFats;
-        breakFast = data.mealList.breakfast.reduce((acc, item) => acc + item.grams, 0);
-        lunch = data.mealList.lunch.reduce((acc, item) => acc + item.grams, 0);
-        dinner = data.mealList.dinner.reduce((acc, item) => acc + item.grams, 0);
-        snacks = data.mealList.snacks.reduce((acc, item) => acc + item.grams, 0);
+        breakFast = data.mealList.breakfast.reduce((acc: number, item: any) => acc + item.grams, 0);
+        lunch = data.mealList.lunch.reduce((acc: number, item: any) => acc + item.grams, 0);
+        dinner = data.mealList.dinner.reduce((acc: number, item: any) => acc + item.grams, 0);
+        snacks = data.mealList.snacks.reduce((acc: number, item: any) => acc + item.grams, 0);
         mealList = data.mealList;
         updateProgress();
       }
@@ -171,6 +171,11 @@
     } else {
       console.warn("Invalid value added to calories");
     }
+  }
+
+  function alertSave(){
+    saveReport()
+    alert('Report Was Successfully saved!')
   }
 </script>
 
@@ -299,7 +304,7 @@
       {/if}
     </div>
 
-    <button on:click={saveReport}> Save Report Page</button>
+    <button class = "save-button" on:click={alertSave}> Save Report Page</button>
   </div>
 
 
