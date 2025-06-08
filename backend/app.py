@@ -109,11 +109,11 @@ def get_profile():
     email = user['email']
     cnx = get_db_connection()
     cursor = cnx.cursor()
-    cursor.execute("SELECT * FROM users WHERE email = ?", (email,)) #reference: https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor-execute.html
-    row = cursor.fetchone() # reference: https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor-fetchone.html
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+    row = cursor.fetchone()
     cnx.close()
-    # reference: https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html
     return jsonify({
+        "email": email,
         "name": row["name"],
         "gender": row["gender"],
         "age": row["age"],
@@ -442,12 +442,7 @@ def add_favorite():
     cursor.execute(
         "SELECT 1 FROM favorite_recipes WHERE email = ? AND recipe_title = ?", 
         (email, recipe)
-   
     )
-    if cursor.fetchone():
-        cnx.close()
-        return jsonify({"message":"Recipe is added"}),200
-    
     cursor.execute("""
         INSERT INTO favorite_recipes (email, recipe_title) VALUES (?, ?)""", 
     (email, recipe))

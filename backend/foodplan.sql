@@ -38,3 +38,14 @@ CREATE TABLE IF NOT EXISTS announcements (
   created_by TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS goal_comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_email TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_by TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  type TEXT NOT NULL CHECK(type IN ('manual','template','auto')),
+  milestone INTEGER,
+  FOREIGN KEY (user_email) REFERENCES users(email)
+);

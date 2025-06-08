@@ -23,7 +23,7 @@
     fetchUserRole();
   });
 
-  $: isModerator = $userRole === 'moderator';
+  $: isModerator = $userRole === 'admin';
 
   async function handlePost() {
     error = '';
