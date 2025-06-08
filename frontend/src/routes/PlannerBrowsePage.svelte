@@ -2,12 +2,9 @@
   import { onMount } from 'svelte';
   import '../assets/planner.scss';
   import DisplayRecipes from './DisplayRecipes.svelte';
-  //import { fetchFavorites, favoriteMap } from '../stores/favorites';
   import { get } from 'svelte/store';
-  import { selectedRecipe} from '../stores/recipe'
   import { calorieRange, selectedDiets, selectedMealTypes } from '../stores/filters';
 
-  let plan: any = {};
   let search = '';
   let results: any[] = [];
   let loading = false;
@@ -15,16 +12,35 @@
   let filteredRecipes: any[] = [];
   let noSearch = true;
 
-  async function recipeLookup(){
+  async function getCaloriesFromNinja(query: string): Promise<number | null> {
+    try {
+      const res = await fetch('http://localhost:8000/api/quary_food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ query })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.items && data.items.length > 0) {
+        return data.items.reduce((sum: number, item: any) => sum + (item.calories || 0), 0);
+      } else {
+        return null;
+      }
+    } catch (err) {
+      console.error('Error fetching calories from Ninja API:', err);
+      return null;
+    }
+  }
+
+  async function recipeLookup() {
     if (!search.trim()) return;
-        
+
     loading = true;
-    results = []; // Clear immediately
+    results = [];
     noSearch = false;
 
-        
     try {
-      // search filters
       const range = get(calorieRange);
       const diets = get(selectedDiets);
       const mealTypes = get(selectedMealTypes);
@@ -35,22 +51,27 @@
         maxCalories: range[1].toString(),
       });
 
-      if (diets.length > 0) {
-        params.set('diet', diets.join(','));
-      }
-      if (mealTypes.length > 0) {
-        params.set('mealType', mealTypes.join(','));
-      }
+      if (diets.length > 0) params.set('diet', diets.join(','));
+      if (mealTypes.length > 0) params.set('mealType', mealTypes.join(','));
 
-      console.log(`Searching for: "${search}"`);
       const res = await fetch(`http://localhost:8000/api/recipe?${params.toString()}`, {
         credentials: 'include'
       });
+
       const data = await res.json();
-      console.log('API response:', data);
-      results = data.items || [];
+      const rawResults = data.items || [];
+
+      results = await Promise.all(
+        rawResults.map(async (item: any) => {
+          const cal = await getCaloriesFromNinja(item.title || item.name || search);
+          return {
+            ...item,
+            calories: cal ?? 'N/A'
+          };
+        })
+      );
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error during recipe lookup:', error);
       results = [];
     } finally {
       loading = false;
@@ -67,7 +88,7 @@
       });
       const data = await res.json();
       allRecipes = data.items || [];
-      filteredRecipes = allRecipes; // Initialize filtered recipes
+      filteredRecipes = allRecipes;
     } catch (error) {
       console.error('Failed to fetch all recipes:', error);
     } finally {
@@ -78,7 +99,7 @@
   async function applyFilters() {
     loading = true;
     noSearch = false;
-    
+
     try {
       const range = get(calorieRange);
       const diets = get(selectedDiets);
@@ -89,16 +110,13 @@
         maxCalories: range[1].toString(),
       });
 
-      if (diets.length > 0) {
-        params.set('diet', diets.join(','));
-      }
-      if (mealTypes.length > 0) {
-        params.set('mealType', mealTypes.join(','));
-      }
+      if (diets.length > 0) params.set('diet', diets.join(','));
+      if (mealTypes.length > 0) params.set('mealType', mealTypes.join(','));
 
       const res = await fetch(`http://localhost:8000/api/recipe?${params.toString()}`, {
         credentials: 'include'
       });
+
       const data = await res.json();
       filteredRecipes = data.items || [];
     } catch (error) {
@@ -110,11 +128,9 @@
   }
 
   onMount(async () => {
-    //await fetchFavorites();
     await fetchAllRecipes();
   });
 
-  // Subscribe to filter changes and reapply filters
   $: if ($calorieRange || $selectedDiets || $selectedMealTypes) {
     applyFilters();
   }
@@ -130,17 +146,10 @@
   {#if loading}
     <p>Loading recipes...</p>
   {:else if results.length > 0}
-    <DisplayRecipes
-      category="Search Results"
-      results={results}
-    />
+    <DisplayRecipes category="Search Results" results={results} />
   {/if}
 
   {#if results.length == 0}
-  <DisplayRecipes
-    category={noSearch ? "All Recipes" : "Search Results"}
-    results={filteredRecipes}
-  />
+    <DisplayRecipes category={noSearch ? "All Recipes" : "Search Results"} results={filteredRecipes} />
   {/if}
-
 </div>
