@@ -282,7 +282,7 @@ def delete_goal():
     return jsonify({"message": "Goal deleted successfully"})
 
 #Report Page
-@app.route('/report', methods=['POST'])
+@app.route('/api/quary_food', methods=['POST'])
 def report():
   data = request.json
   query = data.get('query')
@@ -296,6 +296,48 @@ def report():
       return jsonify(response.json())
   else:
       return jsonify({"error": "FAILED TO GET FOOD DATA"})
+  
+#database for report page
+@app.route('/report', methods=['POST'])
+def set_report():
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "not auth"}),401
+    
+    data = request.get_json()
+    email = user['email']
+    
+    print(f"Data From {email}: data")
+    cal_budget = data.get('calorieBudget')
+    cal_eaten = data.get('calsAte')
+    cal_left = data.get('calsLeft')
+    protein = data.get('totalProtein')
+    carbs = data.get('totalCarbs')
+    fats = data.get('totalFats')
+    
+    print(f"Data being added: cal_budget = {cal_budget}")
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    
+   
+    
+    cursor.execute("""
+        INSERT INTO report_info (email, cal_budget,cal_eaten, cal_left, protein, carbs, fats,report_date)
+        VALUES (?,?,?,?,?,?,?,DATE('now'))  
+        ON CONFLICT(email, report_date) DO UPDATE SET
+            cal_budget = excluded.cal_budget,
+            cal_eaten = excluded.cal_eaten,
+            cal_left = excluded.cal_left,
+            protein = excluded.protein,
+            carbs = excluded.carbs,
+            fats = excluded.fats
+                   """,
+        (email, cal_budget,cal_eaten, cal_left, protein, carbs, fats))
+    cnx.commit()
+    cursor.close()
+    cnx.close()
+    
+    return jsonify({"message": "Report Saved"})
 
 #Recipe Page
 @app.route('/recipes', methods=['GET'])
@@ -307,6 +349,9 @@ def get_recipes():
             {"name": "chicken", "calories": 500} #should we implement from api?
         ]
     })
+    
+    
+    
 
 @app.route('/api/recipe', methods=['GET'])
 def get_recipe():

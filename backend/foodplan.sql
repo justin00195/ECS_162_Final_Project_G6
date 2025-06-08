@@ -1,6 +1,7 @@
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS goals;
 DROP TABLE IF EXISTS goal_comments;
+DROP TABLE IF EXISTS report_info;
 
 CREATE TABLE IF NOT EXISTS users (
   email TEXT PRIMARY KEY,
@@ -48,4 +49,18 @@ CREATE TABLE IF NOT EXISTS goal_comments (
   type TEXT NOT NULL CHECK(type IN ('manual','template','auto')),
   milestone INTEGER,
   FOREIGN KEY (user_email) REFERENCES users(email)
+);
+
+
+CREATE TABLE IF NOT EXISTS report_info (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email VARCHAR(255), 
+  cal_budget INT,
+  cal_eaten INT,
+  cal_left INT,
+  protein FLOAT,
+  carbs FLOAT,
+  fats FLOAT,
+  report_date DATE NOT NULL,
+ UNIQUE(email,report_date)
 );

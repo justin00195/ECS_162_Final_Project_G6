@@ -8,9 +8,6 @@
   import '../assets/report.scss';
   import {selectedServings} from '../stores/recipe';
  
-  
-  
-
   let report: any = {};
 
   // calorieBudget should be calcualted from the goalpage
@@ -59,6 +56,30 @@
     snacks: [],
   }
   
+  async function saveReport(){
+    const calsSaved = {
+      calorieBudget, calsAte,calsLeft, totalProtein, totalFats, totalCarbs
+    };
+
+    try{
+      const res = await fetch('http://localhost:8000/report',{
+        method: 'POST',
+        headers:{'Content-Type': 'application/json'},
+        credentials: 'include',
+        body: JSON.stringify(calsSaved)
+      })
+
+      const result = await res.json()
+      if(!res.ok){
+        console.error(result)
+      }
+    }catch(err){
+      console.error('Error Saving Report Info', err)
+    }
+  }
+
+
+
   // when new food is added it replaces the old one in the list 
   async function getFoodData(meal:mealType, query: string) {
     try{
@@ -69,7 +90,7 @@
         let newFood: foodItem[] = []
 
         for (const q of queries){
-          const res = await fetch('http://localhost:8000/report',{
+          const res = await fetch('http://localhost:8000/api/quary_food',{
           method: 'POST',
           headers:{'Content-Type': 'application/json'},
           credentials: 'include',
@@ -266,8 +287,9 @@
         {:else}
           <p>No Favoirte Recipies Saved!!</p>
       {/if}
-
     </div>
+
+    <button on:click={saveReport}> Save Report Page</button>
   </div>
 
 
