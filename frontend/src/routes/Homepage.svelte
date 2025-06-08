@@ -47,8 +47,9 @@
     }
   }
 
-  function handleTemplateChange(e) {
-    selectedTemplate = e.target.value;
+  function handleTemplateChange(e: Event) {
+    const target = e.target as HTMLSelectElement
+    selectedTemplate = target.value;
     if (selectedTemplate && selectedTemplate !== 'Custom') {
       newAnnouncement = templates.find(t => t.label === selectedTemplate)?.text || '';
     } else {
