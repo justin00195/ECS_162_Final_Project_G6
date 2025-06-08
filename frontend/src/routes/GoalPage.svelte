@@ -219,6 +219,33 @@
   $: if (!hasExistingGoal) {
     latestWeight = startingWeight;
   }
+
+  async function handleDeleteComment(id: number) {
+    await deleteGoalComment(id);
+  }
+
+  /* Commenting out automatic milestone notifications for now
+  $: if (hasExistingGoal && get(userRole) === 'admin') {
+    const milestones = [25, 50, 75, 100];
+    milestones.forEach(async (milestone) => {
+      const progress = Math.round(weightProgress * 100);
+      if (progress >= milestone && !milestoneCommented[milestone]) {
+        const exists = get(goalComments).some(
+          (c: GoalComment) => c.milestone == milestone
+        );
+        if (!exists) {
+          await postGoalComment({
+            user_email: selectedUserEmail,
+            content: `🎉 User reached ${milestone}% of their weight goal!`,
+            type: 'milestone',
+            milestone
+          });
+          milestoneCommented[milestone] = true;
+        }
+      }
+    });
+  }
+  */
 </script>
 
 <h1>Set Your Weight Goal</h1>
