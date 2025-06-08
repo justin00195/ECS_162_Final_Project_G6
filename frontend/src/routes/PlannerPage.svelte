@@ -234,8 +234,8 @@
         }, 200);
     }
 
-    function browseMealRecipes() {
-        window.location.hash = '#/planner/browse';
+    function browseMealRecipes(mealId: number) {
+        window.location.hash = `#/planner/browse?meal=${mealId}&from=planner`;
     }
 
     function handleRenameKeydown(mealId: number, event: KeyboardEvent & { currentTarget: HTMLInputElement }) {
@@ -321,7 +321,7 @@
                             </div>
                         {/if}
                     </div>
-                    <button class="browse-btn" on:click={browseMealRecipes}>
+                    <button class="browse-btn" on:click={() => browseMealRecipes(meal.id)}>
                         Browse Recipes
                     </button>
                 </div>
@@ -349,7 +349,7 @@
     .planner-container {
         max-width: 1000px;
         margin: 0 auto;
-        padding: 2rem;
+        padding: 0 2rem;
         height: 60vh;
         display: flex;
         flex-direction: column;
@@ -358,7 +358,8 @@
         h1 {
             color: #91593B;
             text-align: center;
-            margin-bottom: 2rem;
+            margin: 1rem 0 2rem 0;
+            padding-top: 1rem;
             flex-shrink: 0;
         }
     }

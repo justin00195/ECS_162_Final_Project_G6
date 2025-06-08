@@ -304,6 +304,7 @@ def get_recipes():
 @app.route('/api/recipe', methods=['GET'])
 def get_recipe():
     query = request.args.get('query')
+    limit = request.args.get('limit')
     min_calories = request.args.get('minCalories')
     max_calories = request.args.get('maxCalories')
     diets = request.args.getlist('diet')
@@ -317,7 +318,7 @@ def get_recipe():
 
     params = {
         'apiKey': spoonacular_API_KEY,
-        'number': 20,
+        'number': limit,
         'addRecipeInformation': True,
         'fillIngredients': True,
         'addRecipeInstructions': True,
@@ -701,6 +702,42 @@ def update_meal(meal_id):
         
         cnx.commit()
         return jsonify({'message': 'Meal updated successfully'})
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cnx.close()
+
+# get a specific meal
+@app.route('/api/meal/<int:meal_id>', methods=['GET'])
+def get_meal(meal_id):
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "Not authenticated"}), 401
+        
+    email = user['email']
+    
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT id, name, ingredients 
+            FROM meals 
+            WHERE id = ? AND user_email = ?
+        """, (meal_id, email))
+        
+        meal = cursor.fetchone()
+        
+        if not meal:
+            return jsonify({'error': 'Meal not found or unauthorized'}), 404
+            
+        meal_data = {
+            'id': meal[0],
+            'name': meal[1],
+            'ingredients': meal[2].split('|') if meal[2] else []
+        }
+        
+        return jsonify(meal_data)
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
     finally:
