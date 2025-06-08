@@ -296,34 +296,84 @@ def report():
       return jsonify(response.json())
   else:
       return jsonify({"error": "FAILED TO GET FOOD DATA"})
-  
+
+
+@app.route('/report', methods=['GET'])
+def get_report():
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "not auth"}), 401
+
+    email = user['email']
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute("""
+        SELECT cal_budget, cal_eaten, cal_left, protein, carbs, fats
+        FROM report_info
+        WHERE email = ? AND report_date = DATE('now')
+    """, (email,))
+    row = cursor.fetchone()
+    cursor.execute("""
+        SELECT meal_type, food_name, grams
+        FROM meal_entries
+        WHERE email = ? AND report_date = DATE('now')
+    """, (email,))
+    meals_raw = cursor.fetchall()
+
+    meal_list = {
+        'breakfast': [],
+        'lunch': [],
+        'dinner': [],
+        'snacks': []
+    }
+
+    for meal_type, food_name, grams in meals_raw:
+        meal_list[meal_type].append({
+            'name': food_name,
+            'grams': grams
+        })
+
+    cursor.close()
+    cnx.close()
+
+    if row:
+        report = {
+            "calorieBudget": row[0],
+            "calsAte": row[1],
+            "calsLeft": row[2],
+            "totalProtein": row[3],
+            "totalCarbs": row[4],
+            "totalFats": row[5],
+            "mealList": meal_list  
+        }
+        return jsonify(report)
+    else:
+        return jsonify({"message": "No report found"}), 404
+
 #database for report page
 @app.route('/report', methods=['POST'])
 def set_report():
     user = session.get('user')
     if not user:
-        return jsonify({"error": "not auth"}),401
+        return jsonify({"error": "not auth"}), 401
     
     data = request.get_json()
     email = user['email']
-    
-    print(f"Data From {email}: data")
+
     cal_budget = data.get('calorieBudget')
     cal_eaten = data.get('calsAte')
     cal_left = data.get('calsLeft')
     protein = data.get('totalProtein')
     carbs = data.get('totalCarbs')
     fats = data.get('totalFats')
-    
-    print(f"Data being added: cal_budget = {cal_budget}")
+    meal_list = data.get('mealList', {})  
+
     cnx = get_db_connection()
     cursor = cnx.cursor()
-    
-   
-    
+
     cursor.execute("""
-        INSERT INTO report_info (email, cal_budget,cal_eaten, cal_left, protein, carbs, fats,report_date)
-        VALUES (?,?,?,?,?,?,?,DATE('now'))  
+        INSERT INTO report_info (email, cal_budget, cal_eaten, cal_left, protein, carbs, fats, report_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, DATE('now'))
         ON CONFLICT(email, report_date) DO UPDATE SET
             cal_budget = excluded.cal_budget,
             cal_eaten = excluded.cal_eaten,
@@ -331,13 +381,30 @@ def set_report():
             protein = excluded.protein,
             carbs = excluded.carbs,
             fats = excluded.fats
-                   """,
-        (email, cal_budget,cal_eaten, cal_left, protein, carbs, fats))
+    """, (email, cal_budget, cal_eaten, cal_left, protein, carbs, fats))
+    cursor.execute("""
+        DELETE FROM meal_entries WHERE email = ? AND report_date = DATE('now')
+    """, (email,))
+
+
+    for meal_type, items in meal_list.items():
+        for item in items:
+            food_name = item.get('name')
+            grams = item.get('grams')
+            if food_name and grams is not None:
+                cursor.execute("""
+                    INSERT INTO meal_entries (email, meal_type, food_name, grams, report_date)
+                    VALUES (?, ?, ?, ?, DATE('now'))
+                """, (email, meal_type, food_name, grams))
+
     cnx.commit()
     cursor.close()
     cnx.close()
-    
-    return jsonify({"message": "Report Saved"})
+
+    return jsonify({"message": "Report Saved with Meals"})
+
+
+
 
 #Recipe Page
 @app.route('/recipes', methods=['GET'])

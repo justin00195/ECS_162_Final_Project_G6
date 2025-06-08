@@ -2,6 +2,7 @@ DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS goals;
 DROP TABLE IF EXISTS goal_comments;
 DROP TABLE IF EXISTS report_info;
+DROP TABLE IF EXISTS meal_entries;
 
 CREATE TABLE IF NOT EXISTS users (
   email TEXT PRIMARY KEY,
@@ -63,4 +64,14 @@ CREATE TABLE IF NOT EXISTS report_info (
   fats FLOAT,
   report_date DATE NOT NULL,
  UNIQUE(email,report_date)
+);
+
+CREATE TABLE IF NOT EXISTS meal_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL,
+  meal_type TEXT NOT NULL CHECK(meal_type IN ('breakfast', 'lunch', 'dinner', 'snacks')),
+  food_name TEXT NOT NULL,
+  grams REAL NOT NULL,
+  report_date DATE NOT NULL,
+  FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
 );

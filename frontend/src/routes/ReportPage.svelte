@@ -1,23 +1,19 @@
 <script lang="ts">
-  import {Tween} from 'svelte/motion'
-  import {get} from 'svelte/store';
+  import { onMount } from 'svelte';
+  import { Tween } from 'svelte/motion';
+  import { get } from 'svelte/store';
   import { cubicOut } from 'svelte/easing';
   import { allTDEE } from '../stores/tdee';
   import { calAdjust } from '../stores/calAdjust';
   import { favoriteMap, favoriteCals } from '../stores/favorites';
   import '../assets/report.scss';
-  import {selectedServings} from '../stores/recipe';
- 
+  import { selectedServings } from '../stores/recipe';
+
   let report: any = {};
 
-  // calorieBudget should be calcualted from the goalpage
-  // some how need to pull info from api about macros 
-  //3 main marcos are protien, fats, carbs
-  const tdee = get(allTDEE) ?? 1000
-
-  const calAdj = get(calAdjust) ?? 1000
-  
-  let calorieBudget = tdee + (calAdj);
+  const tdee = get(allTDEE) ?? 1000;
+  const calAdj = get(calAdjust) ?? 1000;
+  let calorieBudget = tdee + calAdj;
   let breakFast = 0;
   let lunch = 0;
   let dinner = 0;
@@ -28,142 +24,156 @@
   let dinnerQ = '';
   let snacksQ = '';
 
-  
   let totalProtein = 0;
   let totalCarbs = 0;
   let totalFats = 0;
-  
-  $:favMap = $favoriteMap;
-  $:favCals = $favoriteCals;
 
+  $: favMap = $favoriteMap;
+  $: favCals = $favoriteCals;
   $: displayFavs = Object.entries(favMap)
     .filter(([recipe, isFav]) => isFav)
-    .map(([recipe])=>({
-      title:recipe,
+    .map(([recipe]) => ({
+      title: recipe,
       recipieCaloires: favCals[recipe] ?? 'N/A'
-    }))
+    }));
 
-  type mealType = 'breakfast' | 'lunch' |'dinner'|'snacks';
+  type mealType = 'breakfast' | 'lunch' | 'dinner' | 'snacks';
   type foodItem = {
     name: string;
     grams: number;
-  }
+  };
 
-  let mealList: Record<mealType, foodItem[]>={
+  let mealList: Record<mealType, foodItem[]> = {
     breakfast: [],
     lunch: [],
     dinner: [],
-    snacks: [],
-  }
-  
-  async function saveReport(){
+    snacks: []
+  };
+
+  onMount(async () => {
+    try {
+      const res = await fetch('http://localhost:8000/report', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        calorieBudget = data.calorieBudget;
+        totalProtein = data.totalProtein;
+        totalCarbs = data.totalCarbs;
+        totalFats = data.totalFats;
+        breakFast = data.mealList.breakfast.reduce((acc, item) => acc + item.grams, 0);
+        lunch = data.mealList.lunch.reduce((acc, item) => acc + item.grams, 0);
+        dinner = data.mealList.dinner.reduce((acc, item) => acc + item.grams, 0);
+        snacks = data.mealList.snacks.reduce((acc, item) => acc + item.grams, 0);
+        mealList = data.mealList;
+        updateProgress();
+      }
+    } catch (err) {
+      console.error("Error loading report:", err);
+    }
+  });
+
+  async function saveReport() {
     const calsSaved = {
-      calorieBudget, calsAte,calsLeft, totalProtein, totalFats, totalCarbs
+      calorieBudget, calsAte, calsLeft, totalProtein, totalFats, totalCarbs, mealList
     };
 
-    try{
-      const res = await fetch('http://localhost:8000/report',{
+    try {
+      const res = await fetch('http://localhost:8000/report', {
         method: 'POST',
-        headers:{'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(calsSaved)
-      })
+      });
 
-      const result = await res.json()
-      if(!res.ok){
-        console.error(result)
+      const result = await res.json();
+      if (!res.ok) {
+        console.error(result);
       }
-    }catch(err){
-      console.error('Error Saving Report Info', err)
+    } catch (err) {
+      console.error('Error Saving Report Info', err);
     }
   }
 
+  async function getFoodData(meal: mealType, query: string) {
+    try {
+      const queries = query.split(',').map(q => q.trim());
+      let totalCals = 0;
+      let labels: string[] = [];
+      let newFood: foodItem[] = [];
 
-
-  // when new food is added it replaces the old one in the list 
-  async function getFoodData(meal:mealType, query: string) {
-    try{
-
-        const queries = query.split(',').map(q=>q.trim())
-        let totalCals = 0
-        let labels: string[] = []
-        let newFood: foodItem[] = []
-
-        for (const q of queries){
-          const res = await fetch('http://localhost:8000/api/quary_food',{
+      for (const q of queries) {
+        const res = await fetch('http://localhost:8000/api/quary_food', {
           method: 'POST',
-          headers:{'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({query:q})
-      })
-          const data = await res.json();
+          body: JSON.stringify({ query: q })
+        });
+        const data = await res.json();
 
-         if (data.items){
-          for(const item of data.items){
+        if (data.items) {
+          for (const item of data.items) {
             totalProtein += item.protein_g || 0;
             totalCarbs += item.carbohydrates_total_g || 0;
             totalFats += item.fat_total_g || 0;
             totalCals += item.calories || 0;
-            labels.push(item.name)
-            
+            labels.push(item.name);
+
             newFood.push({
               name: item.name,
               grams: item.serving_size_g
-            })
+            });
           }
-         }
         }
-      
-        mealList = {...mealList, [meal]:newFood}
-      
-      if(meal =='breakfast'){
-        breakFast = totalCals
-        breakFastQ = labels.join(',')
-      }else if (meal =='lunch'){
-        lunch = totalCals
-        lunchQ = labels.join(',')
-      }else if (meal =='dinner'){
-        dinner = totalCals
-        dinnerQ = labels.join(',')
-      }else if (meal =='snacks'){
-        snacks = totalCals
-        snacksQ = labels.join(',')
       }
-      
-      updateProgress()
-  }catch(err){
-    console.error("Failed to get data")
+
+      mealList = { ...mealList, [meal]: newFood };
+
+      if (meal === 'breakfast') {
+        breakFast = totalCals;
+        breakFastQ = labels.join(',');
+      } else if (meal === 'lunch') {
+        lunch = totalCals;
+        lunchQ = labels.join(',');
+      } else if (meal === 'dinner') {
+        dinner = totalCals;
+        dinnerQ = labels.join(',');
+      } else if (meal === 'snacks') {
+        snacks = totalCals;
+        snacksQ = labels.join(',');
+      }
+
+      updateProgress();
+    } catch (err) {
+      console.error("Failed to get data", err);
+    }
   }
-}
-  
-
-
 
   let progress = new Tween(0, {
     duration: 500,
     easing: cubicOut
-  })
+  });
   $: calsAte = breakFast + lunch + dinner + snacks;
-  $: calsLeft = Math.max(0, calorieBudget - calsAte)
+  $: calsLeft = Math.max(0, calorieBudget - calsAte);
 
-  function updateProgress(){
+  function updateProgress() {
     const totalCals = breakFast + lunch + dinner + snacks;
-    progress.target = Math.min(calorieBudget, Math.max(0,totalCals))
+    progress.target = Math.min(calorieBudget, Math.max(0, totalCals));
   }
 
-  function addFavCals(cals: number | string){
-    const calsNum = typeof cals == 'number' ? cals : parseFloat(cals)
+  function addFavCals(cals: number | string) {
+    const calsNum = typeof cals === 'number' ? cals : parseFloat(cals);
 
-    if (!isNaN(calsNum)){
-      dinner += calsNum
-      updateProgress()
-    }else{
-      console.warn("Invalid value added to calories")
+    if (!isNaN(calsNum)) {
+      dinner += calsNum;
+      updateProgress();
+    } else {
+      console.warn("Invalid value added to calories");
     }
   }
-
-  
 </script>
+
 
 
 <!--
