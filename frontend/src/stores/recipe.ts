@@ -11,3 +11,4 @@ export interface Recipe {
 }
 
 export const selectedRecipe = writable<Recipe | null>(null);
+export const selectedServings = writable<number | null>(null);
