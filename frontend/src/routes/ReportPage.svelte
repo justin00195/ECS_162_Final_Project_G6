@@ -200,8 +200,9 @@
 
 
   <div class = "report-layout">
-  <div class="left-side">
-    <div class= "marco-input-wrapper">
+
+
+  
       <div class = "input-box">
         <div>
           <label for = "breakFastLabel">Breakfast</label>
@@ -241,22 +242,22 @@
             />
             <button class ="add-button" on:click={()=> getFoodData('snacks', snacksQ)}>Add</button>
         </div>
+        <button class = "save-button" on:click={alertSave}> Save Report Page</button>
       </div>
-    
-      <div class="macro-progress-wrapper">
+
+      
+
+    <div class="macro-progress-wrapper">
 
         <div class ="macro-progress">
           <label for ="protein"> Total protein ate today {totalProtein}</label>
           <progress class ="protein-prog" id ="protein" max = {170} value={totalProtein.toFixed(2)}></progress>
         </div>
-        
-
-
+      
         <div class ="macro-progress">
           <label for ="carbs">Total carbohydrates ate today {totalCarbs}</label>
           <progress class ="carbs-prog"  id ="carbs" max = {250} value={totalCarbs.toFixed(2)}></progress>
-        </div>
-          
+        </div>    
 
         <div class ="macro-progress">
           <label for ="fats">Total fats ate today {totalFats}</label>
@@ -264,11 +265,9 @@
         </div>
           
       </div>
-    </div>
-  </div>
 
 
-  <div class="display-info-wrapper">
+    <div class="display-info-wrapper">
       <h2>Meals Eaten Today</h2>
 
       {#each Object.entries(mealList) as [mealName, items]}
@@ -286,9 +285,10 @@
         </div>
       {/each}
     </div>
-
-
-    <div>
+  </div>
+<!--
+  
+<div>
       <h2>Favoirte Recipies</h2>
       {#if displayFavs.length > 0}
         <ul>
@@ -304,8 +304,12 @@
       {/if}
     </div>
 
-    <button class = "save-button" on:click={alertSave}> Save Report Page</button>
-  </div>
+    
+
+
+
+-->
+    
 
 
 
