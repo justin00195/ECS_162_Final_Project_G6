@@ -7,9 +7,23 @@
   import { calAdjust } from '../stores/calAdjust';
   import { favoriteMap, favoriteCals } from '../stores/favorites';
   import '../assets/report.scss';
-  import { selectedServings } from '../stores/recipe';
+  import { selectedMeal } from '../stores/meal';
+  import type { Meal } from '../stores/meal';
 
+  let meal: Meal | null;
+  $: meal = $selectedMeal
   let report: any = {};
+
+  onMount(()=>{
+    selectedMeal.set({
+      id:1,
+      name: 'Test Meal',
+      date: '06-09-2025',
+      recipes:['Eggs', 'Toast', 'Butter']
+    })
+  })
+  
+
 
   const tdee = get(allTDEE) ?? 1000;
   const calAdj = get(calAdjust) ?? 1000;
@@ -162,6 +176,8 @@
     progress.target = Math.min(calorieBudget, Math.max(0, totalCals));
   }
 
+  /**
+   * THIS IS NOT BEING USED
   function addFavCals(cals: number | string) {
     const calsNum = typeof cals === 'number' ? cals : parseFloat(cals);
 
@@ -172,6 +188,18 @@
       console.warn("Invalid value added to calories");
     }
   }
+   */
+  
+  async function addMealToBudget(mealType:mealType) {
+    if ($selectedMeal?.recipes?.length){
+      const mealQuery = $selectedMeal.recipes.join(',')
+
+      await getFoodData(mealType, mealQuery)
+    }else{
+      alert("No Meals To Add!")
+    }
+  }
+
 
   function alertSave(){
     saveReport()
@@ -283,6 +311,26 @@
       {/each}
     </div>
   </div>
+
+
+
+
+<div>
+  {#if $selectedMeal}
+    <div>
+      <h2>Saved Meal Plans</h2>
+      <p>{$selectedMeal.name}</p>
+      <ul>
+        {#each $selectedMeal.recipes as recipe}
+          <li>{recipe}</li>
+        {/each}
+      </ul>
+        <button on:click={()=> addMealToBudget('breakfast')}>Add Meal</button>
+    </div>
+  {:else}
+      <p>No Meal Plans Made</p>
+  {/if}
+</div>
 <!--
   
 <div>

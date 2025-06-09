@@ -476,6 +476,8 @@
                 <div class="results-grid">
                     {#each results as recipe, index (recipe.id ?? recipe.title ?? index)}
                         <div class="recipe-card">
+                            <!-- svelte-ignore a11y_click_events_have_key_events -->
+                            <!-- svelte-ignore a11y_no_static_element_interactions -->
                             <span class="recipe-title" on:click={() => goToRecipe(recipe)}>{recipe.title}</span>
                             <button 
                               class="heart-button"
@@ -516,9 +518,11 @@
                         <div class="no-favorites">No favorite recipes yet</div>
                     {:else}
                         {#each favoriteRecipes as recipe, index (recipe.id ?? recipe.title ?? index)}
+                            <!-- svelte-ignore a11y_click_events_have_key_events -->
                             <div class="recipe-tag" on:click={() => goToRecipe(recipe)} role="button" tabindex="0">
                                 <div class="tag-content">
                                     <span class="tag-text">{recipe.title}</span>
+                                    <!-- svelte-ignore a11y_consider_explicit_label -->
                                     <button 
                                         class="remove-button"
                                         on:click|stopPropagation={(e) => removeFromFavorites(recipe, e)}
@@ -544,6 +548,7 @@
                         <div class="loading">Loading recipes...</div>
                     {:else}
                         {#each initialRecipes as recipe, index (recipe.id ?? recipe.title ?? index)}
+                            <!-- svelte-ignore a11y_click_events_have_key_events -->
                             <div class="recipe-tag" on:click={() => goToRecipe(recipe)} role="button" tabindex="0">
                                 <div class="tag-content">
                                     <span class="tag-text">{recipe.title}</span>
