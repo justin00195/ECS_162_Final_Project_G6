@@ -78,9 +78,9 @@ def auth_callback():
         #store it in flask
         userinfo = userinfo_resp.json()
         email = userinfo.get('email', '')
-        if email == 'moderator@hw3.com':
+        if email == 'moderator@FoodTracker.com':
             userinfo['role'] = 'moderator'
-        elif email == 'admin@hw3.com':
+        elif email == 'admin@FoodTracker.com':
             userinfo['role'] = 'admin'
         else:
             userinfo['role'] = 'user'
