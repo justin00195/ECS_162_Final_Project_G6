@@ -48,6 +48,19 @@
     padding: 2rem;
     width: auto;
   }
+
+  .meal-plans{
+    background-color:#b0acaa;
+    border-radius: 15px;
+    width: auto;
+    padding: 2rem;
+    margin-top: -5rem;
+  }
+
+  .meal-plans button{
+    border-radius: 15px;
+  }
+
   .progress-wrapper{
     display: flex;
     flex-direction: column;
@@ -108,3 +121,5 @@
     width: 50%;
     background-color:#b0acaa;
   }
+
+  

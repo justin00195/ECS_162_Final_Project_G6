@@ -227,7 +227,7 @@
 
 
   <div class ="progress-info">
-    <div>Daily Budget: {calorieBudget} | Calories Eaten: {calsAte} | Budget Remaining: {calsLeft}</div> 
+    <div>Daily Budget: {calorieBudget.toFixed(2)} | Calories Eaten: {calsAte.toFixed(2)} | Budget Remaining: {calsLeft.toFixed(2)}</div> 
   </div>
   </div>
   </div>
@@ -281,17 +281,17 @@
     <div class="macro-progress-wrapper">
 
         <div class ="macro-progress">
-          <label for ="protein"> Total protein ate today {totalProtein}</label>
+          <label for ="protein"> Total protein ate today {totalProtein.toFixed(2)}</label>
           <progress class ="protein-prog" id ="protein" max = {170} value={totalProtein.toFixed(2)}></progress>
         </div>
       
         <div class ="macro-progress">
-          <label for ="carbs">Total carbohydrates ate today {totalCarbs}</label>
+          <label for ="carbs">Total carbohydrates ate today {totalCarbs.toFixed(2)}</label>
           <progress class ="carbs-prog"  id ="carbs" max = {250} value={totalCarbs.toFixed(2)}></progress>
         </div>    
 
         <div class ="macro-progress">
-          <label for ="fats">Total fats ate today {totalFats}</label>
+          <label for ="fats">Total fats ate today {totalFats.toFixed(2)}</label>
           <progress class="fats-prog" id ="fats" max = {75} value={totalFats.toFixed(2)}></progress>
         </div>
           
@@ -316,22 +316,20 @@
         </div>
       {/each}
     </div>
-  </div>
 
 
 
-
-    <div>
+     <div class ="meal-plans">
       <h2>Saved Meal Plans</h2>
       <ul>
         {#each savedMeals as m}
-          <li>
+          <li style = "padding:0.5rem;">
             {m.name}
             <button on:click={() => selectedMeal.set(m)}>Select</button>
           </li>
         {/each}
       </ul>
-    </div>
+    
     
     {#if $selectedMeal}
       <div>
@@ -344,6 +342,15 @@
         <button on:click={() => addMealToBudget('breakfast')}>Add Meal</button>
       </div>
     {/if}
+   </div>
+
+
+  </div>
+
+
+
+
+   
     
     
 <!--
