@@ -1,112 +1,98 @@
 <script lang="ts">
-    export let params;
-    import {onMount} from 'svelte';
-    import {selectedRecipe} from '../stores/recipe';
-    import type { Recipe } from '../stores/recipe';
-    import {get} from 'svelte/store';
+  import { onMount } from 'svelte';
+  import { selectedRecipe } from '../stores/recipe';
+  import type { Recipe } from '../stores/recipe';
+  import { get } from 'svelte/store';
 
-    let recipe = get(selectedRecipe);
-    let loading = false;
-    let errorMessage ='';
-    let mealId: number | null = null;
+  export let params;
+  let loading = true;
+  let errorMessage = '';
+  let mealId: number | null = null;
+  let recipe: Recipe | null = null;
 
-    onMount(()=>{
-      if(!recipe){
-        errorMessage = 'Recipe Not Found'
-        return;
-      }
-
-      loading = false;
-
-    });
-
-    onMount(async () => {
-      // Get meal ID from URL and convert to number
-      const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
-      const mealIdParam = urlParams.get('meal');
-      mealId = mealIdParam ? parseInt(mealIdParam, 10) : null;
-      console.log('URL params:', { hash: window.location.hash, mealId }); // Debug log
-
-      // Subscribe to recipe store
-      selectedRecipe.subscribe(value => {
-        recipe = value;
-        console.log('Recipe updated:', recipe); // Debug log
+  async function getCaloriesFromNinja(query: string): Promise<number | null> {
+    try {
+      const res = await fetch('http://localhost:8000/api/quary_food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ query })
       });
-    });
 
-  function goBack() {
-    selectedRecipe.set(null);
-    // Keep the meal ID when going back
-    const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
-    const mealId = urlParams.get('meal');
-    if (mealId) {
-      window.location.hash = `#/planner/browse?meal=${mealId}`;
-    } else {
-      window.location.hash = "#/planner/browse";
+      const data = await res.json();
+      if (res.ok && data.items && data.items.length > 0) {
+        return data.items.reduce((sum: number, item: any) => sum + (item.calories || 0), 0);
+      } else {
+        return null;
+      }
+    } catch (err) {
+      console.error('Error fetching calories from Ninja API:', err);
+      return null;
     }
   }
 
-  // If we somehow got here without a recipe (e.g., direct URL access),
-  // redirect back to browse page
-  if (!recipe) {
-    window.location.hash = '/planner/browse';
-  }
+  onMount(async () => {
+    const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    const mealIdParam = urlParams.get('meal');
+    mealId = mealIdParam ? parseInt(mealIdParam, 10) : null;
 
-  // Ensure calories exists, default to 0 if not present
-  if (recipe && !recipe.calories) {
-    recipe = {
-      ...recipe,
-      calories: 0
-    } as Recipe;
-  }
-
-  async function addToMeal() {
-    if (!recipe || !mealId) {
-      console.log('Missing recipe or mealId:', { recipe, mealId }); // Debug log
+    // 從 store 拿當前選的食譜
+    recipe = get(selectedRecipe);
+    if (!recipe) {
+      errorMessage = 'Recipe Not Found';
+      window.location.hash = '/planner/browse';
       return;
     }
 
+    // 若缺 calories，用 Ninja API 補
+    if (!recipe.calories && recipe.title) {
+      const cal = await getCaloriesFromNinja(recipe.title);
+      recipe = {
+        ...recipe,
+        calories: cal ?? 0
+      };
+    }
 
-    
+    loading = false;
+  });
+
+  function goBack() {
+    selectedRecipe.set(null);
+    const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    const mealId = urlParams.get('meal');
+    window.location.hash = mealId
+      ? `#/planner/browse?meal=${mealId}`
+      : '#/planner/browse';
+  }
+
+  async function addToMeal() {
+    if (!recipe || !mealId) return;
     try {
-      // First get current meal to append to ingredients
       const getResponse = await fetch(`http://localhost:8000/api/meal/${mealId}`, {
         credentials: 'include'
       });
-
-      if (!getResponse.ok) {
-        throw new Error('Failed to fetch meal');
-      }
-
       const mealData = await getResponse.json();
       const currentIngredients = mealData.ingredients || [];
-      console.log(mealData)
-      
-      // Now update with appended ingredient
+
       const response = await fetch(`http://localhost:8000/api/meal/${mealId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           ingredients: [...currentIngredients, recipe.title]
         })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to add recipe to meal');
-      }
-
-      // Navigate back to planner on success
+      if (!response.ok) throw new Error('Failed to add recipe');
       window.location.hash = '#/planner';
     } catch (error) {
-      console.error('Failed to add recipe to meal:', error);
+      console.error('Add to meal failed:', error);
       alert('Failed to add recipe to meal. Please try again.');
     }
   }
-
 </script>
+
+
 
 <div class="recipe-detail">
     <div class="container">

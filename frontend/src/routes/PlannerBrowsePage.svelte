@@ -39,7 +39,6 @@
   const cachedSuggestions = writable<Recipe[]>([]);
   const hasFetchedInitial = writable(false);
 
-  // Load cached data from localStorage on initialization
   try {
     const savedFavorites = localStorage.getItem('cachedFavorites');
     const savedSuggestions = localStorage.getItem('cachedSuggestions');
@@ -53,7 +52,6 @@
     console.error('Error loading cached data:', error);
   }
 
-  // Subscribe to store changes to update localStorage
   cachedFavorites.subscribe(value => {
     try {
       localStorage.setItem('cachedFavorites', JSON.stringify(value));
@@ -70,7 +68,6 @@
     }
   });
 
-  // Get meal ID from URL search params
   const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
   const mealId = urlParams.get('meal');
   const fromPlanner = urlParams.get('from') === 'planner';
@@ -80,7 +77,6 @@
       return;
     }
     
-    // Check if we have cached favorites
     const currentFavorites = get(cachedFavorites);
     if (currentFavorites.length > 0) {
       favoriteRecipes = currentFavorites;
@@ -126,7 +122,7 @@
       const recipes = await Promise.all(recipesPromises);
       const validRecipes = recipes.filter((recipe): recipe is Recipe => recipe !== null);
       favoriteRecipes = validRecipes;
-      cachedFavorites.set(validRecipes); // Cache the favorites
+      cachedFavorites.set(validRecipes); 
       
     } catch (error) {
       console.error('Failed to fetch favorite recipes:', error);
@@ -151,13 +147,10 @@
   }
 
   onMount(async () => {
-    // Get meal ID from URL search params
     const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
     const mealId = urlParams.get('meal');
     const fromPlanner = urlParams.get('from') === 'planner';
-    
-    // Only restore search state if not coming from planner
-    if (!fromPlanner) {
+        if (!fromPlanner) {
       const savedState = get(searchState);
       if (savedState) {
         search = savedState.searchTerm;
@@ -225,7 +218,7 @@
       }
 
       favoriteRecipes = favoriteRecipes.filter(fav => fav.title !== recipe.title);
-      cachedFavorites.set(favoriteRecipes); // Update cache
+      cachedFavorites.set(favoriteRecipes); 
     } catch (error) {
       console.error('Failed to remove from favorites:', error);
       alert('Failed to remove recipe from favorites. Please try again.');
@@ -253,7 +246,7 @@
       });
       const data = await res.json();
       initialRecipes = data.items || [];
-      cachedSuggestions.set(data.items || []); // Cache the suggestions
+      cachedSuggestions.set(data.items || []); 
     } catch (error) {
       console.error('Failed to fetch initial recipes:', error);
       initialRecipes = [];
@@ -291,7 +284,6 @@
         isSearching = true;
         noSearch = false;
         
-        // Update search state
         searchState.set({
           searchTerm: search,
           results,
@@ -324,14 +316,12 @@
       const data = await res.json();
       results = data.items || [];
       
-      // Cache the results with the filters
       try {
         localStorage.setItem(`searchResults_${cacheKey}`, JSON.stringify(results));
       } catch (error) {
         console.error('Error caching search results:', error);
       }
       
-      // Save search state
       searchState.set({
         searchTerm: search,
         results,
@@ -363,9 +353,8 @@
 
   // Update the goToRecipe function
   function goToRecipe(recipe: Recipe) {
-    selectedRecipe.set(recipe);  // Store the full recipe data
+    selectedRecipe.set(recipe);  
     const encodedTitle = encodeURIComponent(recipe.title);
-    // Keep the meal ID when navigating to recipe
     const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
     const mealId = urlParams.get('meal');
     const fromPlanner = urlParams.get('from');
@@ -410,14 +399,14 @@
         if (response.status === 409 || (data.error && data.error.includes('UNIQUE constraint failed'))) {
           if (!favoriteRecipes.some(fav => fav.title === recipe.title)) {
             favoriteRecipes = [...favoriteRecipes, recipe];
-            cachedFavorites.set(favoriteRecipes); // Update cache
+            cachedFavorites.set(favoriteRecipes); 
           }
           return;
         }
       }
 
       favoriteRecipes = [...favoriteRecipes, recipe];
-      cachedFavorites.set(favoriteRecipes); // Update cache
+      cachedFavorites.set(favoriteRecipes); 
     } catch (error) {
       console.error('Failed to add to favorites:', error);
     } finally {
@@ -439,12 +428,10 @@
     goToRecipe(recipe);
   }
 
-  // Subscribe to filter changes and reapply search if we have an active search
   $: if (($calorieRange || $selectedDiets || $selectedMealTypes) && isSearching) {
     handleSearch();
   }
 
-  // Subscribe to changes in results to update favorites
   $: if (results.length > 0) {
     fetchFavoriteRecipes();
   }

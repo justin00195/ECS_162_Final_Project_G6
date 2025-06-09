@@ -200,9 +200,6 @@
 
 
   <div class = "report-layout">
-
-
-  
       <div class = "input-box">
         <div>
           <label for = "breakFastLabel">Breakfast</label>
