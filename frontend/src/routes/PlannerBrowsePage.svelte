@@ -6,6 +6,7 @@
   import { calorieRange, selectedDiets, selectedMealTypes } from '../stores/filters';
   import { searchState } from '../stores/search';  // We'll create this store
   import { selectedMeal } from '../stores/meal';
+  import { selectedRecipe } from '../stores/recipe';
   import { writable } from 'svelte/store';
 
   interface Recipe {
