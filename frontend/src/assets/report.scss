@@ -88,6 +88,21 @@
     background-color: yellow;
   }
 
+
+  .cals-prog::-webkit-progress-value{
+    background-color: green;
+  }
+  .fats-prog::-webkit-progress-value{
+    background-color: red;
+  }
+  .protein-prog::-webkit-progress-value{
+    background-color: blue;
+  }
+
+  .carbs-prog::-webkit-progress-value{
+    background-color: yellow;
+  }
+
   .save-button{
     border-radius: 15px;
     width: 50%;
