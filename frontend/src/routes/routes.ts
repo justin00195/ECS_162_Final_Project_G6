@@ -6,6 +6,8 @@ import ReportPage from './ReportPage.svelte';
 import CalculatorPage from './CalculatorPage.svelte';
 import RecipePage from './RecipePage.svelte';
 import RecipeInstructions from './RecipeInstructions.svelte';
+import PlannerBrowsePage from './PlannerBrowsePage.svelte';
+import FilterRecipes from './FilterRecipes.svelte';
 
 const routes = {
     '/': Homepage,
@@ -16,6 +18,8 @@ const routes = {
     '/recipe': RecipePage,
     '/user-portal': UserPortal,
     '/recipe/:title': RecipeInstructions,
+    '/planner/browse': PlannerBrowsePage,
+    '/filter': FilterRecipes,
    // '*': PlannerPage
 };
 
