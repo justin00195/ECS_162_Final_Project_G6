@@ -4,24 +4,15 @@
     import {selectedRecipe} from '../stores/recipe';
     import type { Recipe } from '../stores/recipe';
     import {get} from 'svelte/store';
-    import { selectedMeal } from '../stores/meal';
-    import type { Meal } from '../stores/meal';
 
-
-    let recipeTitle = decodeURIComponent(params.title);
     let recipe = get(selectedRecipe);
     let loading = false;
     let errorMessage ='';
     let mealId: number | null = null;
 
-    /*onMount(async () => {
-    if (params.title) {
-      await getRecipeInfo(decodeURIComponent(recipeTitle));
-    }
-  })*/
     onMount(()=>{
       if(!recipe){
-        errorMessage = 'Recipe Not Found BUGGGGGG'
+        errorMessage = 'Recipe Not Found'
         return;
       }
 
@@ -42,30 +33,6 @@
         console.log('Recipe updated:', recipe); // Debug log
       });
     });
-
-  function formatIngredients(meal: any): string[] {
-    // if (typeof meal.ingredients === 'string') {
-    //   // Split by pipe character and trim each ingredient
-    //   return meal.ingredients.split('|').map((s: string) => s.trim()).filter(Boolean);
-    // }
-    // return meal.ingredients; // Return as is if it's already an array
-    console.log(meal.ingredients.split("|"))
-    return meal.ingredients.split("|");
-  }
-
-  function formatInstructions(meal: any): string[] {
-    // if (typeof meal.instructions === 'string') {
-    //   // Split by single period and trim each instruction
-    //   return meal.instructions.split('.')
-    //     .map((s: string) => s.trim())
-    //     .filter(Boolean)
-    //     .map((s: string) => s + '.');
-    // }
-    // return meal.instructions; // Return as is if it's already an array
-    console.log(meal.instructions.split("."))
-    return meal.instructions.split(".").map((s: string) => s.trim()).filter(Boolean);
-  }
-
 
   function goBack() {
     selectedRecipe.set(null);
