@@ -11,19 +11,8 @@
   import type { Meal } from '../stores/meal';
 
   let meal: Meal | null;
-  $: meal = $selectedMeal
+  $: meal = $selectedMeal;
   let report: any = {};
-
-  onMount(()=>{
-    selectedMeal.set({
-      id:1,
-      name: 'Test Meal',
-      date: '06-09-2025',
-      recipes:['Eggs', 'Toast', 'Butter']
-    })
-  })
-  
-
 
   const tdee = get(allTDEE) ?? 1000;
   const calAdj = get(calAdjust) ?? 1000;
@@ -32,6 +21,7 @@
   let lunch = 0;
   let dinner = 0;
   let snacks = 0;
+  let savedMeals: Meal[] = [];
 
   let breakFastQ = '';
   let lunchQ = '';
@@ -64,7 +54,21 @@
     snacks: []
   };
 
+  async function loadSavedMeals() {
+    try {
+      const res = await fetch('http://localhost:8000/api/meal', {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Failed to load saved meals');
+      const data = await res.json();
+      savedMeals = data.meals || [];
+    } catch (err) {
+      console.error('Failed to load saved meals:', err);
+    }
+  }
+
   onMount(async () => {
+    await loadSavedMeals();
     try {
       const res = await fetch('http://localhost:8000/report', {
         method: 'GET',
@@ -76,10 +80,10 @@
         totalProtein = data.totalProtein;
         totalCarbs = data.totalCarbs;
         totalFats = data.totalFats;
-        breakFast = data.mealList.breakfast.reduce((acc: number, item: any) => acc + item.grams, 0);
-        lunch = data.mealList.lunch.reduce((acc: number, item: any) => acc + item.grams, 0);
-        dinner = data.mealList.dinner.reduce((acc: number, item: any) => acc + item.grams, 0);
-        snacks = data.mealList.snacks.reduce((acc: number, item: any) => acc + item.grams, 0);
+        breakFast = Array.isArray(data.mealList.breakfast) ? data.mealList.breakfast.reduce((acc: number, item: any) => acc + item.grams, 0) : 0;
+        lunch = Array.isArray(data.mealList.lunch) ? data.mealList.lunch.reduce((acc: number, item: any) => acc + item.grams, 0) : 0;
+        dinner = Array.isArray(data.mealList.dinner) ? data.mealList.dinner.reduce((acc: number, item: any) => acc + item.grams, 0) : 0;
+        snacks = Array.isArray(data.mealList.snacks) ? data.mealList.snacks.reduce((acc: number, item: any) => acc + item.grams, 0) : 0;
         mealList = data.mealList;
         updateProgress();
       }
@@ -168,6 +172,7 @@
     duration: 500,
     easing: cubicOut
   });
+
   $: calsAte = breakFast + lunch + dinner + snacks;
   $: calsLeft = Math.max(0, calorieBudget - calsAte);
 
@@ -176,34 +181,35 @@
     progress.target = Math.min(calorieBudget, Math.max(0, totalCals));
   }
 
-  /**
-   * THIS IS NOT BEING USED
-  function addFavCals(cals: number | string) {
-    const calsNum = typeof cals === 'number' ? cals : parseFloat(cals);
+  async function addMealToBudget() {
+    if (!$selectedMeal?.ingredients?.length) {
+      alert("No Meals To Add!");
+      return;
+    }
 
-    if (!isNaN(calsNum)) {
-      dinner += calsNum;
-      updateProgress();
+    const name = $selectedMeal.name.toLowerCase();
+    let mealType: mealType;
+
+    if (name.includes("breakfast")) {
+      mealType = 'breakfast';
+    } else if (name.includes("lunch")) {
+      mealType = 'lunch';
+    } else if (name.includes("dinner")) {
+      mealType = 'dinner';
+    } else if (name.includes("snack")) {
+      mealType = 'snacks';
     } else {
-      console.warn("Invalid value added to calories");
+      mealType = 'breakfast';
     }
-  }
-   */
-  
-  async function addMealToBudget(mealType:mealType) {
-    if ($selectedMeal?.recipes?.length){
-      const mealQuery = $selectedMeal.recipes.join(',')
 
-      await getFoodData(mealType, mealQuery)
-    }else{
-      alert("No Meals To Add!")
-    }
+    const mealQuery = $selectedMeal.ingredients.join(',');
+    await getFoodData(mealType, mealQuery);
   }
 
 
-  function alertSave(){
-    saveReport()
-    alert('Report Was Successfully saved!')
+  function alertSave() {
+    saveReport();
+    alert('Report Was Successfully saved!');
   }
 </script>
 
@@ -315,22 +321,31 @@
 
 
 
-<div>
-  {#if $selectedMeal}
     <div>
       <h2>Saved Meal Plans</h2>
-      <p>{$selectedMeal.name}</p>
       <ul>
-        {#each $selectedMeal.recipes as recipe}
-          <li>{recipe}</li>
+        {#each savedMeals as m}
+          <li>
+            {m.name}
+            <button on:click={() => selectedMeal.set(m)}>Select</button>
+          </li>
         {/each}
       </ul>
-        <button on:click={()=> addMealToBudget('breakfast')}>Add Meal</button>
     </div>
-  {:else}
-      <p>No Meal Plans Made</p>
-  {/if}
-</div>
+    
+    {#if $selectedMeal}
+      <div>
+        <p><strong>Selected Meal:</strong> {$selectedMeal.name}</p>
+        <ul>
+          {#each $selectedMeal.ingredients ?? [] as item}
+            <li>{item}</li>
+          {/each}
+        </ul>
+        <button on:click={() => addMealToBudget('breakfast')}>Add Meal</button>
+      </div>
+    {/if}
+    
+    
 <!--
   
 <div>
