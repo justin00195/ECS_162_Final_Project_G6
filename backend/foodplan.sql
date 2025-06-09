@@ -75,3 +75,13 @@ CREATE TABLE IF NOT EXISTS meal_entries (
   report_date DATE NOT NULL,
   FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
 );
+
+
+CREATE TABLE IF NOT EXISTS meals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  date_created TIMESTAMP,
+  ingredients TEXT,
+  user_email TEXT NOT NULL,
+  FOREIGN KEY (user_email) REFERENCES users(email)
+);

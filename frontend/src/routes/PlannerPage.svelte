@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from "svelte";
 
     let mealsContainer: HTMLElement;
     let meals: { id: number, name: string, ingredients: string[] }[] = [];
@@ -8,7 +9,27 @@
     let isLoading: { [key: number]: boolean } = {};
     let showDropdown: { [key: number]: boolean } = {};
 
-
+    async function loadMeals() {
+        try {
+            const response = await fetch('http://localhost:8000/api/meal', {
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to load meals');
+            }
+            
+            const data = await response.json();
+            // Sort meals by ID to ensure ascending order
+            meals = data.meals.sort((a: { id: number }, b: { id: number }) => a.id - b.id);
+            
+            // Update nextMealId to be greater than any existing meal ID
+            const maxId = meals.length > 0 ? Math.max(...meals.map(m => m.id)) : 0;
+            nextMealId = maxId + 1;
+        } catch (error) {
+            console.error('Error loading meals:', error);
+        }
+    }
 
     async function getCaloriesFromNinja(query: string): Promise<number | null> {
     try {
@@ -63,29 +84,89 @@
         }
     }
 
-    function addMeal() {
-        const newId = nextMealId++;
-        meals = [...meals, { id: newId, name: `Meal ${newId + 1}`, ingredients: [] }];
-        searchResults[newId] = [];
-        searchQuery[newId] = '';
-        isLoading[newId] = false;
-        showDropdown[newId] = false;
+    async function addMeal() {
+        const newMealName = `Meal ${meals.length + 1}`;
         
-        // Wait for DOM update before scrolling
-        setTimeout(() => {
-            mealsContainer?.scrollTo({
-                top: mealsContainer.scrollHeight,
-                behavior: 'smooth'
+        try {
+            const response = await fetch('http://localhost:8000/api/meal', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    name: newMealName
+                })
             });
-        }, 0);
+
+            if (!response.ok) {
+                throw new Error('Failed to add meal to database');
+            }
+
+            const data = await response.json();
+            // Only update UI if database operation was successful
+            const newMeal = { 
+                id: data.meal_id, 
+                name: newMealName, 
+                ingredients: [] 
+            };
+            meals = [...meals, newMeal];  // Add to end of array
+            searchResults[data.meal_id] = [];
+            searchQuery[data.meal_id] = '';
+            isLoading[data.meal_id] = false;
+            showDropdown[data.meal_id] = false;
+            
+            // Wait for DOM update before scrolling
+            setTimeout(() => {
+                mealsContainer?.scrollTo({
+                    top: mealsContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 0);
+        } catch (error) {
+            console.error('Error adding meal:', error);
+        }
     }
 
-    function deleteMeal(mealId: number) {
-        meals = meals.filter(meal => meal.id !== mealId);
-        delete searchResults[mealId];
-        delete searchQuery[mealId];
-        delete isLoading[mealId];
-        delete showDropdown[mealId];
+    async function deleteMeal(mealId: number) {
+        try {
+            const response = await fetch(`http://localhost:8000/api/meal/${mealId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete meal');
+            }
+
+            // Only update UI if delete was successful
+            meals = meals.filter(meal => meal.id !== mealId);
+            delete searchResults[mealId];
+            delete searchQuery[mealId];
+            delete isLoading[mealId];
+            delete showDropdown[mealId];
+        } catch (error) {
+            console.error('Error deleting meal:', error);
+        }
+    }
+
+    async function updateMeal(mealId: number, updateData: { name?: string, ingredients?: string[] }) {
+        try {
+            const response = await fetch(`http://localhost:8000/api/meal/${mealId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify(updateData)
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update meal');
+            }
+        } catch (error) {
+            console.error('Error updating meal:', error);
+        }
     }
 
     function renameMeal(mealId: number, newName: string) {
@@ -95,21 +176,26 @@
             }
             return meal;
         });
+        updateMeal(mealId, { name: newName });
     }
 
     function addIngredient(mealId: number, ingredientName: string) {
         if (!ingredientName.trim()) return;
         
-        meals = meals.map(meal => {
+        const updatedMeals = meals.map(meal => {
             if (meal.id === mealId) {
-                return {
+                const updatedMeal = {
                     ...meal,
                     ingredients: [...meal.ingredients, ingredientName.trim()]
                 };
+                // Update in database
+                updateMeal(mealId, { ingredients: updatedMeal.ingredients });
+                return updatedMeal;
             }
             return meal;
         });
-
+        
+        meals = updatedMeals;
         // Clear search after adding
         searchQuery[mealId] = '';
         searchResults[mealId] = [];
@@ -121,6 +207,8 @@
             if (meal.id === mealId) {
                 const newIngredients = [...meal.ingredients];
                 newIngredients.splice(index, 1);
+                // Update in database
+                updateMeal(mealId, { ingredients: newIngredients });
                 return {
                     ...meal,
                     ingredients: newIngredients
@@ -146,8 +234,8 @@
         }, 200);
     }
 
-    function browseMealRecipes() {
-        window.location.hash = '#/planner/browse';
+    function browseMealRecipes(mealId: number) {
+        window.location.hash = `#/planner/browse?meal=${mealId}&from=planner`;
     }
 
     function handleRenameKeydown(mealId: number, event: KeyboardEvent & { currentTarget: HTMLInputElement }) {
@@ -161,6 +249,17 @@
             event.currentTarget.blur();
         }
     }
+
+    function handleRenameBlur(mealId: number, event: FocusEvent & { currentTarget: HTMLInputElement }) {
+        const input = event.currentTarget;
+        if (input.value.trim()) {
+            renameMeal(mealId, input.value.trim());
+        }
+    }
+
+    onMount(async () => {
+        await loadMeals();
+    });
 </script>
 
 <div class="planner-container">
@@ -176,6 +275,7 @@
                             class="meal-title"
                             value={meal.name}
                             on:keydown={(e) => handleRenameKeydown(meal.id, e)}
+                            on:blur={(e) => handleRenameBlur(meal.id, e)}
                         />
                     </div>
                     <!-- svelte-ignore a11y_consider_explicit_label -->
@@ -223,7 +323,7 @@
                             </div>
                         {/if}
                     </div>
-                    <button class="browse-btn" on:click={browseMealRecipes}>
+                    <button class="browse-btn" on:click={() => browseMealRecipes(meal.id)}>
                         Browse Recipes
                     </button>
                 </div>
@@ -251,7 +351,7 @@
     .planner-container {
         max-width: 1000px;
         margin: 0 auto;
-        padding: 2rem;
+        padding: 0 2rem;
         height: 60vh;
         display: flex;
         flex-direction: column;
@@ -260,7 +360,8 @@
         h1 {
             color: #91593B;
             text-align: center;
-            margin-bottom: 2rem;
+            margin: 1rem 0 2rem 0;
+            padding-top: 1rem;
             flex-shrink: 0;
         }
     }
