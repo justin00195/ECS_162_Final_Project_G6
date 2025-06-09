@@ -4,6 +4,7 @@ import os
 import secrets
 import requests
 from db import get_db_connection, init_db
+from functools import wraps
 import sqlite3
 
 clientSecret = os.getenv("OIDC_CLIENT_SECRET")
@@ -76,6 +77,13 @@ def auth_callback():
             return f"Failed to get user info: {userinfo_resp.text}", 500
         #store it in flask
         userinfo = userinfo_resp.json()
+        email = userinfo.get('email', '')
+        if email == 'moderator@hw3.com':
+            userinfo['role'] = 'moderator'
+        elif email == 'admin@hw3.com':
+            userinfo['role'] = 'admin'
+        else:
+            userinfo['role'] = 'user'
         session['user'] = userinfo
         return redirect(f"{frontend_url}#/user-portal")
     except Exception as e:
@@ -102,11 +110,11 @@ def get_profile():
     email = user['email']
     cnx = get_db_connection()
     cursor = cnx.cursor()
-    cursor.execute("SELECT * FROM users WHERE email = ?", (email,)) #reference: https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor-execute.html
-    row = cursor.fetchone() # reference: https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor-fetchone.html
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+    row = cursor.fetchone()
     cnx.close()
-    # reference: https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor.html
     return jsonify({
+        "email": email,
         "name": row["name"],
         "gender": row["gender"],
         "age": row["age"],
@@ -275,7 +283,7 @@ def delete_goal():
     return jsonify({"message": "Goal deleted successfully"})
 
 #Report Page
-@app.route('/report', methods=['POST'])
+@app.route('/api/quary_food', methods=['POST'])
 def report():
   data = request.json
   query = data.get('query')
@@ -290,6 +298,115 @@ def report():
   else:
       return jsonify({"error": "FAILED TO GET FOOD DATA"})
 
+
+@app.route('/report', methods=['GET'])
+def get_report():
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "not auth"}), 401
+
+    email = user['email']
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute("""
+        SELECT cal_budget, cal_eaten, cal_left, protein, carbs, fats
+        FROM report_info
+        WHERE email = ? AND report_date = DATE('now')
+    """, (email,))
+    row = cursor.fetchone()
+    cursor.execute("""
+        SELECT meal_type, food_name, grams
+        FROM meal_entries
+        WHERE email = ? AND report_date = DATE('now')
+    """, (email,))
+    meals_raw = cursor.fetchall()
+
+    meal_list = {
+        'breakfast': [],
+        'lunch': [],
+        'dinner': [],
+        'snacks': []
+    }
+
+    for meal_type, food_name, grams in meals_raw:
+        meal_list[meal_type].append({
+            'name': food_name,
+            'grams': grams
+        })
+
+    cursor.close()
+    cnx.close()
+
+    if row:
+        report = {
+            "calorieBudget": row[0],
+            "calsAte": row[1],
+            "calsLeft": row[2],
+            "totalProtein": row[3],
+            "totalCarbs": row[4],
+            "totalFats": row[5],
+            "mealList": meal_list  
+        }
+        return jsonify(report)
+    else:
+        return jsonify({"message": "No report found"}), 404
+
+#database for report page
+@app.route('/report', methods=['POST'])
+def set_report():
+    user = session.get('user')
+    if not user:
+        return jsonify({"error": "not auth"}), 401
+    
+    data = request.get_json()
+    email = user['email']
+
+    cal_budget = data.get('calorieBudget')
+    cal_eaten = data.get('calsAte')
+    cal_left = data.get('calsLeft')
+    protein = data.get('totalProtein')
+    carbs = data.get('totalCarbs')
+    fats = data.get('totalFats')
+    meal_list = data.get('mealList', {})  
+
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+
+    cursor.execute("""
+        INSERT INTO report_info (email, cal_budget, cal_eaten, cal_left, protein, carbs, fats, report_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, DATE('now'))
+        ON CONFLICT(email, report_date) DO UPDATE SET
+            cal_budget = excluded.cal_budget,
+            cal_eaten = excluded.cal_eaten,
+            cal_left = excluded.cal_left,
+            protein = excluded.protein,
+            carbs = excluded.carbs,
+            fats = excluded.fats
+    """, (email, cal_budget, cal_eaten, cal_left, protein, carbs, fats))
+    cursor.execute("""
+        DELETE FROM meal_entries WHERE email = ? AND report_date = DATE('now')
+    """, (email,))
+
+
+    for meal_type, items in meal_list.items():
+        for item in items:
+            food_name = item.get('name')
+            grams = item.get('grams')
+            if food_name and grams is not None:
+                cursor.execute("""
+                    INSERT INTO meal_entries (email, meal_type, food_name, grams, report_date)
+                    VALUES (?, ?, ?, ?, DATE('now'))
+                """, (email, meal_type, food_name, grams))
+
+    cnx.commit()
+    cursor.close()
+    cnx.close()
+
+    return jsonify({"message": "Report Saved with Meals"})
+
+
+
+
 #Recipe Page
 @app.route('/recipes', methods=['GET'])
 def get_recipes():
@@ -300,6 +417,9 @@ def get_recipes():
             {"name": "chicken", "calories": 500} #should we implement from api?
         ]
     })
+    
+    
+    
 
 @app.route('/api/recipe', methods=['GET'])
 def get_recipe():
@@ -541,6 +661,159 @@ def search_food():
 
     except requests.exceptions.RequestException as e:
         return jsonify({'error': str(e)}), 500
+
+# Announcement Role Decorator
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = session.get('user')
+        if not user or user.get('role') != 'admin':
+            return jsonify({'error': 'Admin access required'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Announcements API
+@app.route('/announcements', methods=['GET'])
+def get_announcements():
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute("SELECT id, content, created_by, created_at FROM announcements ORDER BY created_at DESC")
+    rows = cursor.fetchall()
+    cnx.close()
+    announcements = [
+        {
+            'id': row['id'],
+            'content': row['content'],
+            'created_by': row['created_by'],
+            'created_at': row['created_at']
+        }
+        for row in rows
+    ]
+    return jsonify(announcements)
+
+@app.route('/announcements', methods=['POST'])
+@admin_required
+def post_announcement():
+    user = session.get('user')
+    data = request.get_json()
+    content = data.get('content')
+    if not content:
+        return jsonify({'error': 'Content required'}), 400
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute(
+        "INSERT INTO announcements (content, created_by) VALUES (?, ?)",
+        (content, user.get('email', 'admin'))
+    )
+    cnx.commit()
+    ann_id = cursor.lastrowid
+    cursor.execute("SELECT id, content, created_by, created_at FROM announcements WHERE id = ?", (ann_id,))
+    row = cursor.fetchone()
+    cnx.close()
+    return jsonify({
+        'id': row['id'],
+        'content': row['content'],
+        'created_by': row['created_by'],
+        'created_at': row['created_at']
+    })
+
+@app.route('/announcements/<int:ann_id>', methods=['DELETE'])
+@admin_required
+def delete_announcement(ann_id):
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute("DELETE FROM announcements WHERE id = ?", (ann_id,))
+    cnx.commit()
+    cnx.close()
+    return jsonify({'success': True})
+
+@app.route('/logout', methods=['GET'])
+def logout():
+    session.clear()
+    return jsonify({"message": "Logged out"})
+
+# --- Goal Comments API ---
+@app.route('/goal-comments', methods=['GET'])
+def get_goal_comments():
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    user_email = request.args.get('user_email')
+    # Allow admins to fetch comments for any user_email, or users to fetch their own comments
+    if user.get('role') != 'admin' and user_email != user.get('email'):
+        return jsonify({'error': 'Forbidden'}), 403
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute("SELECT id, user_email, content, created_by, created_at, type, milestone FROM goal_comments WHERE user_email = ? ORDER BY created_at DESC", (user_email,))
+    rows = cursor.fetchall()
+    cnx.close()
+    comments = [
+        {
+            'id': row['id'],
+            'user_email': row['user_email'],
+            'content': row['content'],
+            'created_by': row['created_by'],
+            'created_at': row['created_at'],
+            'type': row['type'],
+            'milestone': row['milestone']
+        }
+        for row in rows
+    ]
+    return jsonify(comments)
+
+@app.route('/goal-comments', methods=['POST'])
+@admin_required
+def post_goal_comment():
+    data = request.get_json()
+    user_email = data.get('user_email')
+    content = data.get('content')
+    comment_type = data.get('type', 'manual')
+    milestone = data.get('milestone')
+    if not user_email or not content:
+        return jsonify({'error': 'user_email and content required'}), 400
+    user = session.get('user')
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute(
+        "INSERT INTO goal_comments (user_email, content, created_by, type, milestone) VALUES (?, ?, ?, ?, ?)",
+        (user_email, content, user.get('email', 'admin'), comment_type, milestone)
+    )
+    cnx.commit()
+    comment_id = cursor.lastrowid
+    cursor.execute("SELECT id, user_email, content, created_by, created_at, type, milestone FROM goal_comments WHERE id = ?", (comment_id,))
+    row = cursor.fetchone()
+    cnx.close()
+    return jsonify({
+        'id': row['id'],
+        'user_email': row['user_email'],
+        'content': row['content'],
+        'created_by': row['created_by'],
+        'created_at': row['created_at'],
+        'type': row['type'],
+        'milestone': row['milestone']
+    })
+
+@app.route('/goal-comments/<int:comment_id>', methods=['DELETE'])
+@admin_required
+def delete_goal_comment(comment_id):
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute("DELETE FROM goal_comments WHERE id = ?", (comment_id,))
+    cnx.commit()
+    cnx.close()
+    return jsonify({'success': True})
+
+@app.route('/users/list', methods=['GET'])
+def list_users():
+    user = session.get('user')
+    if not user or user.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    cnx = get_db_connection()
+    cursor = cnx.cursor()
+    cursor.execute("SELECT email, name FROM users")
+    users = [{'email': row['email'], 'name': row['name']} for row in cursor.fetchall()]
+    cnx.close()
+    return jsonify(users)
 
 # post a meal
 @app.route('/api/meal', methods=['POST'])

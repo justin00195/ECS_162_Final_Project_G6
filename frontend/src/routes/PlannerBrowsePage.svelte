@@ -3,7 +3,6 @@
   import '../assets/planner.scss';
   import DisplayRecipes from './DisplayRecipes.svelte';
   import { get } from 'svelte/store';
-  import { selectedRecipe} from '../stores/recipe'
   import { calorieRange, selectedDiets, selectedMealTypes } from '../stores/filters';
   import { searchState } from '../stores/search';  // We'll create this store
   import { selectedMeal } from '../stores/meal';
@@ -314,16 +313,13 @@
         maxCalories: range[1].toString(),
       });
 
-      if (diets.length > 0) {
-        params.set('diet', diets.join(','));
-      }
-      if (mealTypes.length > 0) {
-        params.set('mealType', mealTypes.join(','));
-      }
+      if (diets.length > 0) params.set('diet', diets.join(','));
+      if (mealTypes.length > 0) params.set('mealType', mealTypes.join(','));
 
       const res = await fetch(`http://localhost:8000/api/recipe?${params.toString()}`, {
         credentials: 'include'
       });
+
       const data = await res.json();
       results = data.items || [];
       

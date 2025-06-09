@@ -2,6 +2,17 @@
   import { onMount } from 'svelte';
   import { calAdjust } from '../stores/calAdjust';
   import '../assets/goal.scss';
+  import { userRole, fetchUserRole } from '../stores/userRole';
+  import {
+    goalComments,
+    goalCommentsLoading,
+    goalCommentsError,
+    fetchGoalComments,
+    postGoalComment,
+    deleteGoalComment,
+    type GoalComment
+  } from '../stores/goalComments';
+  import { get } from 'svelte/store';
 
   let currentWeight = 0;
   let startingWeight = 0;
@@ -17,17 +28,13 @@
   let showDurationTooltip = false;
   let showCalorieTooltip = false;
 
-  // Saved values for progress calculations
   let savedStartingWeight = 0;
   let savedLatestWeight = 0;
   let savedTargetWeight = 0;
   let savedDuration = 0;
   let savedStartDate = '';
 
-  // track goal type
   let goalType: 'lose' | 'maintain' | 'gain' = 'maintain';
-
-  // derive a friendly label
   $: goalLabel =
     goalType === 'lose'
       ? 'Lose Weight'
@@ -35,12 +42,30 @@
       ? 'Gain Weight'
       : 'Maintain Weight';
 
-  // clamp between 0 and 1
   const clamp = (v: number) => Math.min(Math.max(v, 0), 1);
+
+  let userEmail = '';
+  let newComment = '';
+  let selectedTemplate = '';
+  let milestoneCommented: Record<string, boolean> = {
+    '25': false,
+    '50': false,
+    '75': false,
+    '100': false
+  };
+
+  const templates = [
+    'Great job reaching your goal milestone!',
+    'Keep up the good work!',
+    'Remember to stay consistent!',
+    'If you need help, reach out to the community or a moderator.'
+  ];
+
+  let userList: { email: string; name: string }[] = [];
+  let selectedUserEmail = '';
 
   onMount(async () => {
     try {
-      // Load saved message and calorie adjustment from localStorage
       const savedMessage = localStorage.getItem('goalMessage');
       const savedCalorieAdjust = localStorage.getItem('calorieAdjust');
       if (savedMessage) message = savedMessage;
@@ -51,38 +76,55 @@
         credentials: 'include'
       });
       const profileData = await profileRes.json();
-      if (!profileRes.ok) {
-        throw new Error(profileData.error || 'error fetching profile');
-      }
+      if (!profileRes.ok) throw new Error(profileData.error || 'error fetching profile');
+
       currentWeight = profileData.weight;
       startingWeight = currentWeight;
       latestWeight = startingWeight;
+      userEmail = profileData.email;
 
-      const goalRes = await fetch('http://localhost:8000/goal', {
-        method: 'GET',
-        credentials: 'include'
-      });
-      const goalData = await goalRes.json();
-      if (goalRes.ok) {
-        hasExistingGoal = true;
-        goalType = goalData.goal_type;
-        targetWeight = goalData.target_weight;
-        duration = goalData.duration_days;
-        goalStartDate = goalData.start_date;
-        startingWeight = goalData.starting_weight;
-        latestWeight = goalData.latest_weight;
+      await fetchUserRole();
 
-        // Save the initial values
-        savedStartingWeight = startingWeight;
-        savedLatestWeight = latestWeight;
-        savedTargetWeight = targetWeight;
-        savedDuration = duration;
-        savedStartDate = goalStartDate;
+      if (get(userRole) === 'admin') {
+        const usersRes = await fetch('http://localhost:8000/users/list', { credentials: 'include' });
+        userList = await usersRes.json();
+        if (userList.length > 0) {
+          selectedUserEmail = userList[0].email;
+        }
+        await fetchGoalAndComments(selectedUserEmail);
+      } else {
+        selectedUserEmail = userEmail;
+        await fetchGoalAndComments(userEmail);
       }
     } catch (err: any) {
       error = err.message || 'error loading goal';
     }
   });
+
+  async function fetchGoalAndComments(email: string) {
+    // Fetch goal
+    const goalRes = await fetch(`http://localhost:8000/goal`, {
+      method: 'GET',
+      credentials: 'include'
+    });
+    const goalData = await goalRes.json();
+    hasExistingGoal = goalRes.ok;
+    if (hasExistingGoal) {
+      goalType = goalData.goal_type;
+      targetWeight = goalData.target_weight;
+      duration = goalData.duration_days;
+      goalStartDate = goalData.start_date;
+      startingWeight = goalData.starting_weight;
+      latestWeight = goalData.latest_weight;
+      savedStartingWeight = startingWeight;
+      savedLatestWeight = latestWeight;
+      savedTargetWeight = targetWeight;
+      savedDuration = duration;
+      savedStartDate = goalStartDate;
+    }
+    // Fetch comments regardless of goal
+    await fetchGoalComments(email);
+  }
 
   const setGoal = async () => {
     if (!startingWeight || !targetWeight || !duration) {
@@ -105,35 +147,30 @@
         })
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'error setting goal');
-      }
+      if (!res.ok) throw new Error(data.error || 'error setting goal');
+
       const wasFirstGoal = !hasExistingGoal;
       hasExistingGoal = true;
       calorieAdjust = data.calories_sug;
       calAdjust.set(data.calories_sug);
       message = data.message;
 
-      // Save message and calorie adjustment to localStorage
       localStorage.setItem('goalMessage', message);
       localStorage.setItem('calorieAdjust', calorieAdjust.toString());
 
-      // Update saved values after successful submission
       savedStartingWeight = startingWeight;
       savedLatestWeight = latestWeight;
       savedTargetWeight = targetWeight;
       savedDuration = duration;
       savedStartDate = goalStartDate;
 
-      // Fetch the current user profile
       const userProfileRes = await fetch('http://localhost:8000/user/profile', {
         method: 'GET',
         credentials: 'include'
       });
       const userProfile = await userProfileRes.json();
-      // Update the weight field
       userProfile.weight = wasFirstGoal ? startingWeight : latestWeight;
-      // POST the full user profile back
+
       await fetch('http://localhost:8000/user/profile', {
         method: 'POST',
         credentials: 'include',
@@ -145,13 +182,8 @@
     }
   };
 
-  const confirmDelete = () => {
-    showDeleteConfirmation = true;
-  };
-
-  const cancelDelete = () => {
-    showDeleteConfirmation = false;
-  };
+  const confirmDelete = () => (showDeleteConfirmation = true);
+  const cancelDelete = () => (showDeleteConfirmation = false);
 
   const deleteGoal = async () => {
     try {
@@ -159,10 +191,8 @@
         method: 'DELETE',
         credentials: 'include'
       });
-      if (!res.ok) {
-        throw new Error('Failed to delete goal');
-      }
-      // Reset form
+      if (!res.ok) throw new Error('Failed to delete goal');
+
       hasExistingGoal = false;
       goalType = 'maintain';
       targetWeight = 0;
@@ -170,28 +200,24 @@
       goalStartDate = new Date().toISOString().slice(0, 10);
       startingWeight = currentWeight;
       latestWeight = currentWeight;
-      calorieAdjust = 0;  // Reset calorie adjustment
-      calAdjust.set(0);   // Reset the Svelte store as well
-      message = '';       // Clear the message
+      calorieAdjust = 0;
+      calAdjust.set(0);
+      message = '';
 
-      // Clear localStorage
       localStorage.removeItem('goalMessage');
       localStorage.removeItem('calorieAdjust');
 
-      // Reset saved values
       savedStartingWeight = 0;
       savedLatestWeight = 0;
       savedTargetWeight = 0;
       savedDuration = 0;
       savedStartDate = '';
-      
       showDeleteConfirmation = false;
     } catch (err: any) {
       error = err.message || 'Failed to delete goal';
     }
   };
 
-  // reactive: derive goalType whenever start/target change
   $: goalType =
     targetWeight < startingWeight
       ? 'lose'
@@ -199,42 +225,163 @@
       ? 'gain'
       : 'maintain';
 
-  // calculate weight progress using saved values
   $: weightProgress = hasExistingGoal
     ? clamp(
         (savedStartingWeight - savedLatestWeight) /
-        (savedStartingWeight - savedTargetWeight)
+          (savedStartingWeight - savedTargetWeight)
       )
     : 0;
 
-  // calculate time progress using saved values
   $: timeProgress = hasExistingGoal
     ? clamp(
         (Date.now() - new Date(savedStartDate).getTime()) /
-        (savedDuration * 24 * 60 * 60 * 1000)
+          (savedDuration * 24 * 60 * 60 * 1000)
       )
     : 0;
 
-  // Keep latestWeight in sync with startingWeight before first goal is submitted
-  $: if (!hasExistingGoal) {
-    latestWeight = startingWeight;
+  $: if (!hasExistingGoal) latestWeight = startingWeight;
+  $: if (get(userRole) === 'admin' && selectedUserEmail) {
+    fetchGoalAndComments(selectedUserEmail);
   }
+
+  function handleTemplateClick(template: string) {
+    selectedTemplate = template;
+    newComment = template;
+  }
+
+  async function handleAddComment() {
+    if (!newComment.trim()) return;
+    await postGoalComment({ user_email: selectedUserEmail, content: newComment });
+    newComment = '';
+    selectedTemplate = '';
+  }
+
+  async function handleDeleteComment(id: number) {
+    await deleteGoalComment(id);
+  }
+
+  /* Commenting out automatic milestone notifications for now
+  $: if (hasExistingGoal && get(userRole) === 'admin') {
+    const milestones = [25, 50, 75, 100];
+    milestones.forEach(async (milestone) => {
+      const progress = Math.round(weightProgress * 100);
+      if (progress >= milestone && !milestoneCommented[milestone]) {
+        const exists = get(goalComments).some(
+          (c: GoalComment) => c.milestone == milestone
+        );
+        if (!exists) {
+          await postGoalComment({
+            user_email: selectedUserEmail,
+            content: `🎉 User reached ${milestone}% of their weight goal!`,
+            type: 'milestone',
+            milestone
+          });
+          milestoneCommented[milestone] = true;
+        }
+      }
+    });
+  }
+  */
 </script>
+
+{#if $userRole === 'admin'}
+  <div class="card mod-notes-card">
+    <h2>Admin: Leave Notes for Any User</h2>
+
+    <div class="user-select">
+      <label for="mod-user-dropdown">Select User:</label>
+      <select
+        id="mod-user-dropdown"
+        bind:value={selectedUserEmail}
+        on:change={() => fetchGoalAndComments(selectedUserEmail)}
+      >
+        {#each userList as user}
+          <option value={user.email}>
+            {user.name} ({user.email})
+          </option>
+        {/each}
+      </select>
+    </div>
+
+    <div class="comments-section">
+      <h3>Admin Notes for {selectedUserEmail}</h3>
+
+      {#if $goalCommentsLoading}
+        <p>Loading notes…</p>
+      {:else if $goalCommentsError}
+        <p class="error-message">{$goalCommentsError}</p>
+      {:else if $goalComments.length === 0}
+        <p>No notes yet.</p>
+      {/if}
+
+      <ul>
+        {#each $goalComments as comment (comment.id)}
+          <li>
+            <div class="comment-content">{comment.content}</div>
+            <div class="comment-meta">
+              <span>
+                {comment.created_by} |
+                {new Date(comment.created_at).toLocaleString()}
+              </span>
+              <button
+                class="delete-comment"
+                on:click={() => handleDeleteComment(comment.id)}
+              >
+                Delete
+              </button>
+              {#if comment.milestone}
+                <span class="milestone-badge">
+                  🏅 {comment.milestone}% milestone
+                </span>
+              {/if}
+            </div>
+          </li>
+        {/each}
+      </ul>
+
+      <div class="add-comment">
+        <textarea
+          bind:value={newComment}
+          placeholder="Write a note or pick a template…"
+        ></textarea>
+
+        <div class="template-buttons">
+          {#each templates as template}
+            <button
+              type="button"
+              class:active={selectedTemplate === template}
+              on:click={() => handleTemplateClick(template)}
+            >
+              {template}
+            </button>
+          {/each}
+        </div>
+
+        <button
+          class="primary-button"
+          on:click={handleAddComment}
+          disabled={!newComment.trim()}
+        >
+          Add Note
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <h1>Set Your Weight Goal</h1>
 {#if error}
   <p class="error-message">{error}</p>
 {/if}
 
-<!-- FLEXBOX LAYOUT -->
 <div class="flex-container">
   <!-- LEFT COLUMN -->
   <div class="card left-column">
     {#if !hasExistingGoal}
-      <label>
-        Starting Weight (kg):
-        <input type="number" bind:value={startingWeight} />
-      </label>
+<label>
+  Starting Weight (kg):
+  <input type="number" bind:value={startingWeight} />
+</label>
     {:else}
       <div class="saved-value">
         <span class="label">Starting Weight:</span>
@@ -243,26 +390,26 @@
     {/if}
 
     {#if hasExistingGoal}
-      <label>
-        Latest Weight (kg):
-        <input type="number" bind:value={latestWeight} />
-      </label>
+<label>
+  Latest Weight (kg):
+  <input type="number" bind:value={latestWeight} />
+</label>
     {/if}
 
-    <label>
-      Target Weight (kg):
-      <input type="number" bind:value={targetWeight} />
-    </label>
+<label>
+  Target Weight (kg):
+  <input type="number" bind:value={targetWeight} />
+</label>
 
     <div class="input-with-tooltip">
-      <label>
-        Duration (days):
-        <input type="number" bind:value={duration} />
-      </label>
-      <button 
-        class="info-button" 
-        on:click={() => showDurationTooltip = !showDurationTooltip}
-        on:blur={() => showDurationTooltip = false}
+<label>
+  Duration (days):
+  <input type="number" bind:value={duration} />
+</label>
+      <button
+        class="info-button"
+        on:click={() => (showDurationTooltip = !showDurationTooltip)}
+        on:blur={() => (showDurationTooltip = false)}
       >
         ℹ️
       </button>
@@ -274,10 +421,10 @@
     </div>
 
     {#if !hasExistingGoal}
-      <label>
-        Goal Start Date:
-        <input type="date" bind:value={goalStartDate} />
-      </label>
+<label>
+  Goal Start Date:
+  <input type="date" bind:value={goalStartDate} />
+</label>
     {:else}
       <div class="saved-value">
         <span class="label">Start Date:</span>
@@ -309,49 +456,102 @@
 
   <!-- RIGHT COLUMN -->
   <div class="card right-column">
-    {#if message}
+{#if message}
       <div class="notification">
         <span class="checkmark">✅</span>
         <span class="message">{message}</span>
         <div class="calorie-info">
-          <span>Recommended daily calorie {goalType === 'lose' ? 'deficit' : goalType === 'gain' ? 'surplus' : 'adjustment'}:</span>
+          <span>
+            Recommended daily calorie{' '}
+            {goalType === 'lose'
+              ? 'deficit'
+              : goalType === 'gain'
+              ? 'surplus'
+              : 'adjustment'}
+            :
+          </span>
           <div class="input-with-tooltip">
             <strong>{calorieAdjust} kcal</strong>
-            <button 
-              class="info-button" 
-              on:click={() => showCalorieTooltip = !showCalorieTooltip}
-              on:blur={() => showCalorieTooltip = false}
+            <button
+              class="info-button"
+              on:click={() => (showCalorieTooltip = !showCalorieTooltip)}
+              on:blur={() => (showCalorieTooltip = false)}
             >
               ℹ️
             </button>
             {#if showCalorieTooltip}
               <div class="tooltip">
-                This is calculated based on your weight difference and duration. 
-                For every 7700 calories, you gain or lose 1 kg of weight. Your calorie adjustment will be applied to your daily calorie budget.
+                This is calculated based on your weight difference and
+                duration. For every 7700 calories, you gain or lose 1 kg of
+                weight. Your calorie adjustment will be applied to your daily
+                calorie budget.
               </div>
             {/if}
           </div>
         </div>
       </div>
-    {/if}
+{/if}
 
     {#if hasExistingGoal}
       <div class="goal-type">
-        <h3>Goal Type</h3>
-        <p>{goalLabel}</p>
+<h3>Goal Type</h3>
+<p>{goalLabel}</p>
       </div>
     {/if}
 
     <div class="progress-section">
-      <h3>Weight Progress</h3>
-      <progress max="1" value={weightProgress}></progress>
+<h3>Weight Progress</h3>
+<progress max="1" value={weightProgress}></progress>
       <p>{Math.round(weightProgress * 100)}% toward your weight goal</p>
     </div>
 
     <div class="progress-section">
-      <h3>Time Progress</h3>
-      <progress max="1" value={timeProgress}></progress>
+<h3>Time Progress</h3>
+<progress max="1" value={timeProgress}></progress>
       <p>{Math.round(timeProgress * 100)}% of {savedDuration} days elapsed</p>
     </div>
+
+    {#if hasExistingGoal && $userRole !== 'admin'}
+      <div class="comments-section">
+        <h3>Admin Notes</h3>
+
+        {#if $goalCommentsLoading}
+          <p>Loading comments...</p>
+        {:else if $goalCommentsError}
+          <p class="error-message">{$goalCommentsError}</p>
+        {:else if $goalComments.length === 0}
+          <p>No notes yet.</p>
+        {/if}
+
+        <ul>
+          {#each $goalComments as comment (comment.id)}
+            <li>
+              <div class="comment-content">{comment.content}</div>
+              <div class="comment-meta">
+                <span>
+                  {comment.created_by} |{' '}
+                  {new Date(comment.created_at).toLocaleString()}
+                </span>
+                {#if $userRole === 'admin'}
+                  <button
+                    class="delete-comment"
+                    on:click={() => handleDeleteComment(comment.id)}
+                  >
+                    Delete
+                  </button>
+                {/if}
+                {#if comment.milestone}
+                  <span class="milestone-badge">
+                    🏅 {comment.milestone}% milestone
+                  </span>
+                {/if}
+              </div>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
   </div>
 </div>
+
+

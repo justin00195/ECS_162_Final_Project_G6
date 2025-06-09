@@ -87,18 +87,20 @@
 
   .cals-prog::-moz-progress-bar{
     background-color: green;
-
   }
   .fats-prog::-moz-progress-bar{
     background-color: red;
-
   }
   .protein-prog::-moz-progress-bar{
     background-color: blue;
-
   }
 
   .carbs-prog::-moz-progress-bar{
     background-color: yellow;
+  }
 
+  .save-button{
+    border-radius: 15px;
+    width: 50%;
+    background-color:#b0acaa;
   }

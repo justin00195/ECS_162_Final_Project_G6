@@ -4,6 +4,7 @@
   import routes from './routes/routes';
   import './app.scss'
   import Homepage from './routes/Homepage.svelte'; // import homepage directly
+  import { userRole, fetchUserRole } from './stores/userRole';
 
     let isLoggedIn = false;
     let userInfo = {};
@@ -51,6 +52,8 @@
 
         isLoggedIn = false;
         userInfo = {};
+        userRole.set(null); // Reset userRole on logout
+        await fetchUserRole(); // Ensure store is up to date after logout
         window.location.hash = "#/"; // redirect to homepage
       } catch (error) {
         console.error('Logout failed:', error);
