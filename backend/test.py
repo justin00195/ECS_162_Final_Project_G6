@@ -99,7 +99,7 @@ def test_mock_spoonacular(mock_post, mock_get, client):
     mock_get.return_value.json.return_value = {
         "results": [
             {
-                "title": "Chichen Soup",
+                "title": "Chicken Soup",
                 "extendedIngredients": [
                     {"amount": 1, "unit": "cup", "name": "chicken breast"},
                     {"amount": 2, "unit": "cups", "name": "broth"}
