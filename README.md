@@ -27,3 +27,23 @@ npm install -D typescript svelte-check svelte-preprocess @sveltejs/vite-plugin-s
 ```
 npm run dev
 ```
+
+## run full stack 
+docker compose -f docker-compose.dev.yml up --build
+
+
+
+### Backend Test: (Folder: backend)
+```
+pip install pytest
+cd backend
+pip install -r requirements.txt
+pytest
+
+```
+The beginning tests are for API mock test.
+
+The last two tests are to check third-party API tests
+
+Citation: 
+[pytest](https://docs.pytest.org/en/6.2.x/reference.html#pytest-fixture)

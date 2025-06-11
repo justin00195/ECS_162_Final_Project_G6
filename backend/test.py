@@ -1,7 +1,8 @@
 import pytest
 from app import app as flask_app
 from app import get_db_connection
-
+from unittest.mock import patch
+import json
 
 @pytest.fixture
 def client():
@@ -73,3 +74,59 @@ def test_savegoal(client):
     assert res.status_code == 200
     assert 'calories_sug' in res.json
     assert res.json['message'] == 'Goal saved successfully!'
+
+
+@patch('requests.get')
+def test_mock_calorie_ninjas(mock_get, client):
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = {
+        "items": [
+            {"name": "egg", "calories": 20, "serving_size_g": 100}
+        ]
+    }
+
+    res = client.post('/api/quary_food', json={'query': 'egg'})
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "items" in data
+    assert data["items"][0]["name"] == "egg"
+
+
+@patch('requests.get')
+@patch('requests.post')  
+def test_mock_spoonacular(mock_post, mock_get, client):
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = {
+        "results": [
+            {
+                "title": "Chichen Soup",
+                "extendedIngredients": [
+                    {"amount": 1, "unit": "cup", "name": "chicken breast"},
+                    {"amount": 2, "unit": "cups", "name": "broth"}
+                ],
+                "analyzedInstructions": [
+                    {
+                        "steps": [
+                            {"step": "Boil the chicken."},
+                            {"step": "Add the broth."}
+                        ]
+                    }
+                ],
+                "servings": 2,
+                "image": "http://example.com/image.jpg"
+            }
+        ]
+    }
+    mock_post.return_value.status_code = 200
+    mock_post.return_value.json.return_value = {
+        "items": [
+            {"calories": 200},
+            {"calories": 50}
+        ]
+    }
+    res = client.get('/api/recipe?query=chicken&limit=1')
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "items" in data
+    assert data["items"][0]["title"] == "Chicken Soup"
+    assert data["items"][0]["calories"] == 250  # 200 + 50
