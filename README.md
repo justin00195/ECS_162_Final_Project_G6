@@ -45,5 +45,13 @@ The beginning tests are for API mock test.
 
 The last two tests are to check third-party API tests
 
+### Frontend (After logging in, nav bar will appear and check if correctl routing to pages)
+```
+cd frontend
+npm install
+npm install -D vitest
+npx vitest run
+```
+
 Citation: 
 [pytest](https://docs.pytest.org/en/6.2.x/reference.html#pytest-fixture)
