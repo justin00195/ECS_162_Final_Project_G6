@@ -10,3 +10,6 @@ AI was used to help understand how the inputs can persist on the page even after
 
 
 AI was used to ask how to get global value in svelte, which it suggested to use store and create a file to import value.
+
+Unit testing:
+For unit testing, AI was used to help understand how to check svelte-spa-router routings. To mock a user, AI suggested to store/clear global variables. AI also helped debug minor issue with waiting for the page to render, suggesting to use findByText rather than getByText. AI also helped with understanding error with window.matchMedia error.
