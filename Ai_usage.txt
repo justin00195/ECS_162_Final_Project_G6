@@ -1,0 +1,7 @@
+Report Page
+AI was used to understand the API being used, such as breaking down the code example in the API documentation. It was also used to debug styling issues where color for progress bars would show up for certain browsers but not for others. This was fixed since firefox and chrome used different elements for  the styling of progress bars. 
+
+Meal Planner page
+AI was used to get advice and information on how to effectively and dynamically change to different pages, which it suggested to use svelte-spa-router. It was also used to initially explain how the routing works. AI was also used to debug an issue with null results from an API endpoint which turned out to be no longer valid as the platform itself is in the process of integrating into another API Platform.
+
+AI was used to ask how to get global value in svelte, which it suggested to use store and create a file to import value.
