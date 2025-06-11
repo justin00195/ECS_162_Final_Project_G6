@@ -20,6 +20,7 @@ DEX_USERINFO_URL = 'http://dex:5556/userinfo'
 
 
 app = Flask(__name__, static_folder='dist', static_url_path='')
+frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": frontend_url}})
 app.secret_key = secrets.token_hex(16)
 app.config.update(
