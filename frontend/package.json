@@ -7,11 +7,16 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.1.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/svelte": "^5.2.8",
+    "@testing-library/user-event": "^14.6.1",
     "@tsconfig/svelte": "^5.0.4",
+    "jsdom": "^26.1.0",
     "sass": "^1.89.0",
     "svelte": "^5.23.1",
     "svelte-check": "^4.2.1",
@@ -19,6 +24,7 @@
     "svelte-range-slider-pips": "^4.0.0",
     "svelte-spa-router": "^4.0.1",
     "typescript": "~5.7.2",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vitest": "^3.2.3"
   }
 }
