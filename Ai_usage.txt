@@ -10,3 +10,4 @@ AI was used to help understand how the inputs can persist on the page even after
 
 
 AI was used to ask how to get global value in svelte, which it suggested to use store and create a file to import value.
+

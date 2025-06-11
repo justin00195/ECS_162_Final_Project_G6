@@ -36,7 +36,6 @@
     const mealIdParam = urlParams.get('meal');
     mealId = mealIdParam ? parseInt(mealIdParam, 10) : null;
 
-    // 從 store 拿當前選的食譜
     recipe = get(selectedRecipe);
     if (!recipe) {
       errorMessage = 'Recipe Not Found';
@@ -44,7 +43,6 @@
       return;
     }
 
-    // 若缺 calories，用 Ninja API 補
     if (!recipe.calories && recipe.title) {
       const cal = await getCaloriesFromNinja(recipe.title);
       recipe = {
